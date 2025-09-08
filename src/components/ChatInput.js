@@ -28,7 +28,7 @@ export default function ChatInput({ onSendMessage, isLoading = false, disabled =
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={isLoading ? "Tara is thinking..." : "Share what's on your mind..."}
+            placeholder={isLoading ? "Tara is thinking..." : "Share what\'s on your mind..."}
             disabled={isLoading || disabled}
             className="w-full px-4 py-3 pr-12 rounded-2xl border border-gray-200 focus:border-pink-300 focus:ring-2 focus:ring-pink-100 focus:outline-none resize-none min-h-[50px] max-h-32 bg-gradient-to-r from-pink-50/30 to-purple-50/30 text-gray-800 placeholder-gray-400"
             rows={1}
@@ -67,11 +67,11 @@ export default function ChatInput({ onSendMessage, isLoading = false, disabled =
       {/* Emotional support prompts */}
       <div className="mt-3 flex flex-wrap gap-2">
         <button
-          onClick={() => !isLoading && !disabled && onSendMessage("I'm feeling a bit overwhelmed today")}
+          onClick={() => !isLoading && !disabled && onSendMessage("I\'m feeling a bit overwhelmed today")}
           disabled={isLoading || disabled}
           className="px-3 py-1.5 text-xs bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-600 rounded-full border border-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          I'm feeling overwhelmed
+          I&apos;m feeling overwhelmed
         </button>
         <button
           onClick={() => !isLoading && !disabled && onSendMessage("I could use someone to talk to")}

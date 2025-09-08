@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import Sidebar from '@/components/Sidebar';
 import ChatMessage from '@/components/ChatMessage';
@@ -16,6 +16,32 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const [userId, setUserId] = useState(null);
+
+  // Data loaders (declared before effects to avoid TDZ during render)
+  const loadSessions = useCallback(async (uid = userId) => {
+    try {
+      const response = await fetch(`/api/chat/get?userId=${uid}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSessions(data.sessions || []);
+        setMessages(data.chats || []);
+      }
+    } catch (error) {
+      console.error('Error loading sessions:', error);
+    }
+  }, [userId]);
+
+  const loadMessages = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/chat/get?userId=${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data.chats || []);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
+  }, [userId]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -39,39 +65,16 @@ export default function Home() {
     if (userId) {
       loadSessions(userId);
     }
-  }, []);
+  }, [userId, loadSessions]);
 
   // Load messages when session changes
   useEffect(() => {
     if (userId) {
       loadMessages();
     }
-  }, [userId]);
+  }, [userId, loadMessages]);
 
-  const loadSessions = async (uid = userId) => {
-    try {
-      const response = await fetch(`/api/chat/get?userId=${uid}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSessions(data.sessions || []);
-        setMessages(data.chats || []);
-      }
-    } catch (error) {
-      console.error('Error loading sessions:', error);
-    }
-  };
-
-  const loadMessages = async () => {
-    try {
-      const response = await fetch(`/api/chat/get?userId=${userId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(data.chats || []);
-      }
-    } catch (error) {
-      console.error('Error loading messages:', error);
-    }
-  };
+  
 
   const createNewSession = () => {
     // Sessions are no longer used; keep welcome message optional
@@ -79,7 +82,7 @@ export default function Home() {
     if (messages.length === 0) {
       const welcomeMessage = {
         _id: uuidv4(),
-        message: "Hello! I'm Tara, and I'm here to listen and support you. Whether you're having a great day or going through something difficult, I'm here for you. What's on your mind today? 💙",
+        message: "Hello! I&apos;m Tara, and I&apos;m here to listen and support you. Whether you&apos;re having a great day or going through something difficult, I&apos;m here for you. What&apos;s on your mind today? 💙",
         sender: 'bot',
         timestamp: new Date()
       };
@@ -135,7 +138,7 @@ export default function Home() {
       console.error('Error sending message:', error);
       const errorMessage = {
         _id: uuidv4(),
-        message: "I'm sorry, I'm having trouble responding right now. But I want you to know that I'm here for you, and your feelings matter. Please try again in a moment. 💙",
+        message: "I&apos;m sorry, I&apos;m having trouble responding right now. But I want you to know that I&apos;m here for you, and your feelings matter. Please try again in a moment. 💙",
         role: 'bot',
         createdAt: new Date()
       };
@@ -202,8 +205,8 @@ export default function Home() {
                 </div>
                 <h3 className="text-lg font-medium text-gray-800 mb-2">Welcome to Tara</h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  I'm here to be your supportive companion. Whether you want to share your thoughts, 
-                  talk through feelings, or just have someone to listen, I'm here for you.
+                  I&apos;m here to be your supportive companion. Whether you want to share your thoughts, 
+                  talk through feelings, or just have someone to listen, I&apos;m here for you.
                 </p>
               </div>
             </div>

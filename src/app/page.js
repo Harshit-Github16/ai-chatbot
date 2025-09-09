@@ -29,40 +29,34 @@ export default function Home() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   // Data loaders (declared before effects to avoid TDZ during render)
-  const loadSessions = useCallback(async (uid = userId, shouldUpdateMessages = false, shouldUpdateCurrentCharacter = false) => {
+  const loadSessions = useCallback(async (uid = userId) => {
     try {
       const response = await fetch(`/api/chat/get?userId=${uid}`);
       if (response.ok) {
         const data = await response.json();
         setSessions(data.sessions || []);
         
-        // Only update messages if explicitly requested (for initial load)
-        if (shouldUpdateMessages) {
-          setMessages(data.chats || []);
-        }
-        
-        // Update user profile and characters
+        // Update user profile and characters only (never auto-set currentCharacter)
         if (data.userProfile) {
           setUserProfile(data.userProfile);
           setCharacters(data.userProfile.characters || {});
-          
-          // Only set current character to Tara if explicitly requested and no current character exists
-          if (shouldUpdateCurrentCharacter && data.userProfile.characters?.tara && !currentCharacter) {
-            setCurrentCharacter(data.userProfile.characters.tara);
-          }
         }
       }
     } catch (error) {
       console.error('Error loading sessions:', error);
     }
-  }, [userId, currentCharacter]);
+  }, [userId]);
 
-  const loadMessages = useCallback(async (characterName = 'tara') => {
+  const loadMessages = useCallback(async (characterName) => {
+    console.log('loadMessages called with character:', characterName);
+    if (!characterName) return; // Don't load if no character specified
+    
     setIsLoadingMessages(true);
     try {
       const response = await fetch(`/api/chat/get?userId=${userId}&characterName=${characterName}`);
       if (response.ok) {
         const data = await response.json();
+        console.log('Messages loaded for character:', characterName, 'count:', data.chats?.length || 0);
         setMessages(data.chats || []);
       }
     } catch (error) {
@@ -92,7 +86,7 @@ export default function Home() {
 
   useEffect(() => {
     if (userId) {
-      loadSessions(userId, true, true); // Update messages and character on initial load
+      loadSessions(userId); // Only load sessions, don't auto-set character or messages
     }
   }, [userId, loadSessions]);
 
@@ -117,8 +111,41 @@ export default function Home() {
             if (data.userProfile) {
               setUserProfile(data.userProfile);
               setCharacters(data.userProfile.characters || {});
-              if (data.userProfile.characters?.tara) {
-                setCurrentCharacter(data.userProfile.characters.tara);
+              
+              // Try to restore previously selected character from localStorage
+              if (!currentCharacter) {
+                const savedCharacter = typeof window !== 'undefined' ? localStorage.getItem('tara_selected_character') : null;
+                if (savedCharacter) {
+                  try {
+                    const parsedCharacter = JSON.parse(savedCharacter);
+                    // Verify the character still exists in user's characters
+                    const characterKey = parsedCharacter.name.toLowerCase().replace(/\s+/g, '_');
+                    if (data.userProfile.characters?.[characterKey]) {
+                      setCurrentCharacter(data.userProfile.characters[characterKey]);
+                    } else {
+                      // If saved character doesn't exist, set first available
+                      const availableCharacters = data.userProfile.characters || {};
+                      const firstCharacterKey = Object.keys(availableCharacters)[0];
+                      if (firstCharacterKey && availableCharacters[firstCharacterKey]) {
+                        setCurrentCharacter(availableCharacters[firstCharacterKey]);
+                      }
+                    }
+                  } catch (e) {
+                    // If parsing fails, set first available character
+                    const availableCharacters = data.userProfile.characters || {};
+                    const firstCharacterKey = Object.keys(availableCharacters)[0];
+                    if (firstCharacterKey && availableCharacters[firstCharacterKey]) {
+                      setCurrentCharacter(availableCharacters[firstCharacterKey]);
+                    }
+                  }
+                } else {
+                  // No saved character, set first available
+                  const availableCharacters = data.userProfile.characters || {};
+                  const firstCharacterKey = Object.keys(availableCharacters)[0];
+                  if (firstCharacterKey && availableCharacters[firstCharacterKey]) {
+                    setCurrentCharacter(availableCharacters[firstCharacterKey]);
+                  }
+                }
               }
             } else {
               setShowProfileModal(true);
@@ -132,7 +159,7 @@ export default function Home() {
       };
       checkUserProfile();
     }
-  }, [userId, userProfile, isLoading, isInitialLoad]);
+  }, [userId, userProfile, isLoading, isInitialLoad, currentCharacter]);
 
   const handleProfileSubmit = async (profileData) => {
     try {
@@ -145,7 +172,7 @@ export default function Home() {
       if (response.ok) {
         setUserProfile(profileData);
         setShowProfileModal(false);
-        await loadSessions(userId, false, false); // Just refresh sessions, don't change current chat
+        // No need to reload sessions here - profile is already updated
       } else {
         const errorData = await response.json();
         console.error('Profile creation error:', errorData);
@@ -182,7 +209,7 @@ export default function Home() {
             }
           }
         }
-        await loadSessions(userId, false, false); // Just refresh sessions, don't change current chat
+        // No need to reload sessions - characters are already updated
       }
     } catch (error) {
       console.error('Error adding friend:', error);
@@ -190,8 +217,19 @@ export default function Home() {
   };
 
   const handleCharacterSelect = (character) => {
+    console.log('Character selected:', character);
     if (character && character.name !== currentCharacter?.name) {
+      console.log('Setting current character to:', character.name);
+      
+      // Clear current messages immediately to show loading state
+      setMessages([]);
+      setIsLoadingMessages(true);
+      
       setCurrentCharacter(character);
+      // Save selected character to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tara_selected_character', JSON.stringify(character));
+      }
       // loadMessages will be called by the useEffect automatically
     }
   };
@@ -204,7 +242,7 @@ export default function Home() {
         body: JSON.stringify({
           userId,
           messageId,
-          characterName: currentCharacter?.name?.toLowerCase().replace(/\s+/g, '_') || 'tara'
+          characterName: currentCharacter?.name?.toLowerCase().replace(/\s+/g, '_')
         })
       });
       
@@ -233,8 +271,7 @@ export default function Home() {
         if (character?.name === currentCharacter?.name) {
           setMessages([]);
         }
-        // Refresh sessions
-        loadSessions(userId, false, false);
+        // No need to refresh sessions - just update message count display in sidebar will be handled by ChatList
       }
     } catch (error) {
       console.error('Error deleting chat:', error);

@@ -3,7 +3,7 @@ import { addCharacter } from '@/lib/mongodb';
 
 export async function POST(request) {
   try {
-    const { userId, characterName, role } = await request.json();
+    const { userId, characterName, role, image, description } = await request.json();
 
     // Validation
     if (!userId || !characterName || !role) {
@@ -14,7 +14,7 @@ export async function POST(request) {
     }
 
     // Valid roles
-    const validRoles = ['best_friend', 'mentor', 'sister', 'good_friend', 'boyfriend', 'girlfriend', 'brother'];
+    const validRoles = ['best_friend', 'mentor', 'siblings', 'good_friend', 'boyfriend', 'girlfriend', 'other'];
     if (!validRoles.includes(role)) {
       return NextResponse.json(
         { error: 'Invalid role. Must be one of: ' + validRoles.join(', ') },
@@ -23,13 +23,15 @@ export async function POST(request) {
     }
 
     // Add character
-    const result = await addCharacter(userId, { characterName, role });
+    const result = await addCharacter(userId, { characterName, role, image: image || '/profile.jpg', description: role === 'other' ? (description || '') : undefined });
 
     return NextResponse.json({
       success: true,
       message: 'Character added successfully',
       characterName,
-      role
+      role,
+      image: image || '/profile.jpg',
+      description: role === 'other' ? (description || '') : undefined
     });
 
   } catch (error) {

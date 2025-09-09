@@ -1,23 +1,24 @@
 import { useState } from 'react';
-import { Plus, Users, Heart, GraduationCap, UserCheck, Smile } from 'lucide-react';
+import { Plus, Users, Heart, GraduationCap, Smile, UsersRound, Sparkles } from 'lucide-react';
 
 const roleIcons = {
   best_friend: Heart,
   mentor: GraduationCap,
-  sister: Heart,
+  siblings: UsersRound,
   good_friend: Users,
   boyfriend: Smile,
-  girlfriend: Heart
+  girlfriend: Heart,
+  other: Sparkles
 };
 
 const roleLabels = {
   best_friend: 'Tara',
   mentor: 'Mentor',
-  sister: 'Sister',
-  brother: 'Brother',
+  siblings: 'Siblings',
   good_friend: 'Good Friend',
   boyfriend: 'Boyfriend',
-  girlfriend: 'Girlfriend'
+  girlfriend: 'Girlfriend',
+  other: 'Other'
 };
 
 export default function CharacterSelector({ characters, currentCharacter, onCharacterSelect, onAddFriend }) {

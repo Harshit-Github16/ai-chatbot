@@ -1,20 +1,30 @@
 import { useState } from 'react';
-import { X, User, Heart, Users, GraduationCap, UserCheck, Smile } from 'lucide-react';
+import { X, User, Heart, Users, GraduationCap, Smile, UsersRound, Sparkles } from 'lucide-react';
 
 export default function AddFriendModal({ isOpen, onClose, onSubmit }) {
   const [formData, setFormData] = useState({
     name: '',
-    role: ''
+    role: '',
+    image: '/profile.jpg',
+    description: ''
   });
   const [isLoading, setIsLoading] = useState(false);
 
   const roleOptions = [
     { value: 'mentor', label: 'Mentor', icon: GraduationCap, description: 'Wise guide for life advice' },
-    { value: 'sister', label: 'Sister', icon: Heart, description: 'Caring and protective sister' },
-    { value: 'brother', label: 'Brother', icon: Users, description: 'Protective and supportive brother' },
+    { value: 'siblings', label: 'Siblings', icon: UsersRound, description: 'Caring and supportive sibling' },
     { value: 'good_friend', label: 'Good Friend', icon: Users, description: 'Loyal and understanding friend' },
     { value: 'boyfriend', label: 'Boyfriend', icon: Smile, description: 'Caring romantic partner' },
-    { value: 'girlfriend', label: 'Girlfriend', icon: Heart, description: 'Caring romantic partner' }
+    { value: 'girlfriend', label: 'Girlfriend', icon: Heart, description: 'Caring romantic partner' },
+    { value: 'other', label: 'Other', icon: Sparkles, description: 'Custom connection, define in your words' }
+  ];
+
+  const imageOptions = [
+    '/profile.jpg',
+    '/profile1.jpg',
+    '/profile2.jpg',
+    '/profile3.jpg',
+    '/profile4.jpg'
   ];
 
   const handleSubmit = async (e) => {
@@ -25,7 +35,7 @@ export default function AddFriendModal({ isOpen, onClose, onSubmit }) {
     try {
       await onSubmit(formData);
       onClose();
-      setFormData({ name: '', role: '' });
+      setFormData({ name: '', role: '', image: '/profile.jpg', description: '' });
     } catch (error) {
       console.error('Error adding friend:', error);
     } finally {
@@ -76,6 +86,31 @@ export default function AddFriendModal({ isOpen, onClose, onSubmit }) {
             />
           </div>
 
+          {/* Character image selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Choose a profile image
+            </label>
+            <div className="grid grid-cols-5 gap-3">
+              {imageOptions.map((img) => (
+                <button
+                  type="button"
+                  key={img}
+                  onClick={() => setFormData((d) => ({ ...d, image: img }))}
+                  className={`relative rounded-xl overflow-hidden border-2 p-0 ${
+                    formData.image === img ? 'border-pink-400 ring-2 ring-pink-100' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img} alt="profile option" className="w-full h-24 object-cover" />
+                  {formData.image === img && (
+                    <div className="absolute inset-0 bg-pink-500/10" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
               What role should they play?
@@ -119,6 +154,22 @@ export default function AddFriendModal({ isOpen, onClose, onSubmit }) {
               })}
             </div>
           </div>
+
+          {formData.role === 'other' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Describe this relationship (optional)
+              </label>
+              <input
+                type="text"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="e.g., Coach, colleague, cousin..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-pink-300 focus:ring-2 focus:ring-pink-100 focus:outline-none text-gray-800"
+              />
+            </div>
+          )}
 
           <button
             type="submit"

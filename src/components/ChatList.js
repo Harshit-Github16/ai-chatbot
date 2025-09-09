@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { Plus, MessageCircle, Users, Heart, GraduationCap, UserCheck, Smile, MoreVertical, Trash2 } from 'lucide-react';
+import { Plus, MessageCircle, Users, Heart, GraduationCap, Smile, MoreVertical, Trash2, UsersRound, Sparkles } from 'lucide-react';
 
 const roleIcons = {
   best_friend: Heart,
   mentor: GraduationCap,
-  sister: Heart,
-  brother: Users,
+  siblings: UsersRound,
   good_friend: Users,
   boyfriend: Smile,
-  girlfriend: Heart
+  girlfriend: Heart,
+  other: Sparkles
 };
 
 export default function ChatList({ characters, currentCharacter, onCharacterSelect, onAddFriend, onDeleteChat, isLoading }) {

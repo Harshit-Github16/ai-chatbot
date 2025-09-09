@@ -59,7 +59,7 @@ export async function getUserProfile(userId) {
   return user;
 }
 
-export async function addCharacter(userId, { characterName, role }) {
+export async function addCharacter(userId, { characterName, role, image = '/profile.jpg', description }) {
   const { db } = await connectToDatabase();
   const result = await db.collection('users').updateOne(
     { userId },
@@ -68,6 +68,8 @@ export async function addCharacter(userId, { characterName, role }) {
         [`characters.${characterName.toLowerCase().replace(/\s+/g, '_')}`]: {
           name: characterName,
           role,
+          image,
+          description: description ?? null,
           conversations: []
         }
       }

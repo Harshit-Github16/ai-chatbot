@@ -190,7 +190,9 @@ export default function Home() {
         body: JSON.stringify({ 
           userId, 
           characterName: friendData.name, 
-          role: friendData.role 
+          role: friendData.role,
+          image: friendData.image,
+          description: friendData.role === 'other' ? friendData.description : undefined
         })
       });
       
@@ -226,6 +228,8 @@ export default function Home() {
       setIsLoadingMessages(true);
       
       setCurrentCharacter(character);
+      // Close mobile sidebar on selection
+      setSidebarOpen(false);
       // Save selected character to localStorage
       if (typeof window !== 'undefined') {
         localStorage.setItem('tara_selected_character', JSON.stringify(character));
@@ -358,29 +362,61 @@ export default function Home() {
 
   return (
     <div className="flex h-screen w-full bg-gradient-to-br from-pink-50 via-white to-purple-50">
-      {/* Chat List Sidebar */}
-      <ChatList
-        characters={characters}
-        currentCharacter={currentCharacter}
-        onCharacterSelect={handleCharacterSelect}
-        onAddFriend={() => setShowAddFriendModal(true)}
-        onDeleteChat={handleDeleteChat}
-        isLoading={isLoading}
-      />
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block">
+        <ChatList
+          characters={characters}
+          currentCharacter={currentCharacter}
+          onCharacterSelect={handleCharacterSelect}
+          onAddFriend={() => setShowAddFriendModal(true)}
+          onDeleteChat={handleDeleteChat}
+          isLoading={isLoading}
+        />
+      </div>
+
+      {/* Mobile Sidebar Drawer */}
+      <div className={`md:hidden fixed inset-0 z-40 ${sidebarOpen ? '' : 'pointer-events-none'}`}>
+        {/* Overlay */}
+        <div
+          className={`absolute inset-0 bg-black/40 transition-opacity ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}
+          onClick={() => setSidebarOpen(false)}
+        />
+        {/* Drawer */}
+        <div
+          className={`absolute left-0 top-0 h-full w-80 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        >
+          <ChatList
+            characters={characters}
+            currentCharacter={currentCharacter}
+            onCharacterSelect={handleCharacterSelect}
+            onAddFriend={() => setShowAddFriendModal(true)}
+            onDeleteChat={handleDeleteChat}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur-sm border-b border-pink-100 px-6 py-4">
+        <div className="bg-white/80 backdrop-blur-sm border-b border-pink-100 px-4 md:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center">
+              {/* Mobile menu button */}
+              <button
+                className="md:hidden mr-1 rounded-lg border border-gray-200 w-9 h-9 flex items-center justify-center bg-white"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Open menu"
+              >
+                <span className="block w-5 h-[2px] bg-gray-700 relative before:content-[''] before:absolute before:-top-2 before:w-5 before:h-[2px] before:bg-gray-700 after:content-[''] after:absolute after:top-2 after:w-5 after:h-[2px] after:bg-gray-700" />
+              </button>
+              <div className="w-8 h-8 rounded-full overflow-hidden">
                 <Image
-                  src="/profile.jpg"
+                  src={currentCharacter?.image || '/profile.jpg'}
                   alt={currentCharacter?.name || 'Tara'}
                   width={32}
                   height={32}
-                  className="rounded-full"
+                  className="rounded-full object-cover"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -410,22 +446,22 @@ export default function Home() {
                 <div className="w-16 h-16 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   {/* <Heart className="w-8 h-8 text-white" /> */}
                   <Image
-  src="/profile.jpg"
-  alt="Tara"
-  width={96}
-  height={96}
-  className="rounded-full"
-/>
+                    src={currentCharacter?.image || '/profile.jpg'}
+                    alt={currentCharacter?.name || 'Tara'}
+                    width={96}
+                    height={96}
+                    className="rounded-full object-cover"
+                  />
                 </div>
                 <h3 className="text-lg font-medium text-gray-800 mb-2">Welcome to {currentCharacter?.name || 'Tara'}</h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
                   {currentCharacter?.role === 'best_friend' && "I'm here as your best friend! Let's chat about anything - good days, tough times, or just random thoughts. I'm always here for you! 💕"}
                   {currentCharacter?.role === 'mentor' && "I'm here as your mentor and guide. Whether you need advice, want to learn something new, or discuss your goals, I'm here to support your growth! 🎓"}
-                  {currentCharacter?.role === 'sister' && "Hey there! I'm here as your caring sister. We can talk about anything - family stuff, personal issues, or just catch up on life! 👭"}
-                  {currentCharacter?.role === 'brother' && "What's up! I'm here as your supportive brother. Whether you need advice, want to share something, or just hang out, I'm here! 👬"}
+                  {currentCharacter?.role === 'siblings' && "Hey! I'm here as your caring sibling. We can talk about anything - family stuff, personal issues, or just catch up on life! 👨‍👩‍👧‍👦"}
                   {currentCharacter?.role === 'good_friend' && "I'm here as your good friend! Let's share stories, thoughts, and support each other through whatever life brings! 🤝"}
                   {currentCharacter?.role === 'boyfriend' && "Hey babe! I'm here for you always. Whether you want to share your day, talk about dreams, or just spend time together, I love being here with you! 💙"}
                   {currentCharacter?.role === 'girlfriend' && "Hi sweetie! I'm here for you always. Let's talk about our day, share our feelings, or just enjoy each other's company! 💕"}
+                  {currentCharacter?.role === 'other' && (currentCharacter?.description || "I'm here in a special role that you define. Let's connect in a way that suits you best! ✨")}
                   {!currentCharacter?.role && "I'm here to be your supportive companion. Whether you want to share your thoughts, talk through feelings, or just have someone to listen, I'm here for you."}
                 </p>
               </div>

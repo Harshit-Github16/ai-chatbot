@@ -1,15 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Send, Heart } from 'lucide-react';
 import Image from 'next/image';
 
 export default function ChatInput({ onSendMessage, isLoading = false, disabled = false, currentCharacter = null }) {
   const [message, setMessage] = useState('');
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (message.trim() && !isLoading && !disabled) {
       onSendMessage(message.trim());
       setMessage('');
+      // Keep focus in the textarea after sending
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
     }
   };
 
@@ -25,11 +34,12 @@ export default function ChatInput({ onSendMessage, isLoading = false, disabled =
       <form onSubmit={handleSubmit} className="flex gap-3 items-end">
         <div className="flex-1 relative">
           <textarea
+            ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={isLoading ? `${currentCharacter?.name || 'Tara'} is thinking...` : "Share what\'s on your mind..."}
-            disabled={isLoading || disabled}
+            disabled={disabled}
             className="w-full px-4 py-3 pr-12 rounded-2xl border border-gray-200 focus:border-pink-300 focus:ring-2 focus:ring-pink-100 focus:outline-none resize-none min-h-[50px] max-h-32 bg-gradient-to-r from-pink-50/30 to-purple-50/30 text-gray-800 placeholder-gray-400"
             rows={1}
             style={{

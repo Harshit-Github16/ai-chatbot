@@ -3,18 +3,18 @@ import { saveChat } from '@/lib/mongodb';
 
 export async function POST(request) {
   try {
-    const { userId, role, message, usermood, moodReason, createdAt } = await request.json();
+    const { userId, characterName, role, message, usermood, moodReason, createdAt } = await request.json();
 
     // Validation
-    if (!userId || !role || !message) {
+    if (!userId || !characterName || !role || !message) {
       return NextResponse.json(
-        { error: 'Missing required fields: userId, role, message' },
+        { error: 'Missing required fields: userId, characterName, role, message' },
         { status: 400 }
       );
     }
 
     // Save the chat message
-    const result = await saveChat(userId, { role, message, usermood, moodReason, createdAt });
+    const result = await saveChat(userId, characterName, { role, message, usermood, moodReason, createdAt });
 
     return NextResponse.json({
       success: true,

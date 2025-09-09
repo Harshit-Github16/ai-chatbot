@@ -5,7 +5,11 @@ import { v4 as uuidv4 } from 'uuid';
 import Sidebar from '@/components/Sidebar';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
-import { Heart, Sparkles } from 'lucide-react';
+import UserProfileModal from '@/components/UserProfileModal';
+import AddFriendModal from '@/components/AddFriendModal';
+import CharacterSelector from '@/components/CharacterSelector';
+import ChatList from '@/components/ChatList';
+import { Heart, Sparkles, Plus } from 'lucide-react';
 import Image from 'next/image';
 
 export default function Home() {
@@ -16,6 +20,13 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const [userId, setUserId] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [characters, setCharacters] = useState({});
+  const [currentCharacter, setCurrentCharacter] = useState(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showAddFriendModal, setShowAddFriendModal] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   // Data loaders (declared before effects to avoid TDZ during render)
   const loadSessions = useCallback(async (uid = userId) => {
@@ -25,21 +36,35 @@ export default function Home() {
         const data = await response.json();
         setSessions(data.sessions || []);
         setMessages(data.chats || []);
+        
+        // Update user profile and characters
+        if (data.userProfile) {
+          setUserProfile(data.userProfile);
+          setCharacters(data.userProfile.characters || {});
+          
+          // Set current character to Tara if available and no current character
+          if (data.userProfile.characters?.tara && !currentCharacter) {
+            setCurrentCharacter(data.userProfile.characters.tara);
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading sessions:', error);
     }
-  }, [userId]);
+  }, [userId, currentCharacter]);
 
-  const loadMessages = useCallback(async () => {
+  const loadMessages = useCallback(async (characterName = 'tara') => {
+    setIsLoadingMessages(true);
     try {
-      const response = await fetch(`/api/chat/get?userId=${userId}`);
+      const response = await fetch(`/api/chat/get?userId=${userId}&characterName=${characterName}`);
       if (response.ok) {
         const data = await response.json();
         setMessages(data.chats || []);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
+    } finally {
+      setIsLoadingMessages(false);
     }
   }, [userId]);
 
@@ -70,11 +95,103 @@ export default function Home() {
   // Load messages when session changes
   useEffect(() => {
     if (userId) {
-      loadMessages();
+      loadMessages(currentCharacter?.name?.toLowerCase().replace(/\s+/g, '_') || 'tara');
     }
-  }, [userId, loadMessages]);
+  }, [userId, loadMessages, currentCharacter]);
 
   
+
+  // Check if user needs profile setup
+  useEffect(() => {
+    if (userId && userProfile === null && !isLoading && isInitialLoad) {
+      // Check if user profile exists in database
+      const checkUserProfile = async () => {
+        try {
+          const response = await fetch(`/api/user/profile?userId=${userId}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.userProfile) {
+              setUserProfile(data.userProfile);
+              setCharacters(data.userProfile.characters || {});
+              if (data.userProfile.characters?.tara) {
+                setCurrentCharacter(data.userProfile.characters.tara);
+              }
+            } else {
+              setShowProfileModal(true);
+            }
+          }
+          setIsInitialLoad(false);
+        } catch (error) {
+          console.error('Error checking user profile:', error);
+          setIsInitialLoad(false);
+        }
+      };
+      checkUserProfile();
+    }
+  }, [userId, userProfile, isLoading, isInitialLoad]);
+
+  const handleProfileSubmit = async (profileData) => {
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, ...profileData })
+      });
+      
+      if (response.ok) {
+        setUserProfile(profileData);
+        setShowProfileModal(false);
+        await loadSessions();
+      } else {
+        const errorData = await response.json();
+        console.error('Profile creation error:', errorData);
+      }
+    } catch (error) {
+      console.error('Error creating profile:', error);
+    }
+  };
+
+  const handleAddFriend = async (friendData) => {
+    try {
+      const response = await fetch('/api/character/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId, 
+          characterName: friendData.name, 
+          role: friendData.role 
+        })
+      });
+      
+      if (response.ok) {
+        // Refresh user profile and characters
+        const profileResponse = await fetch(`/api/user/profile?userId=${userId}`);
+        if (profileResponse.ok) {
+          const data = await profileResponse.json();
+          if (data.userProfile) {
+            setUserProfile(data.userProfile);
+            setCharacters(data.userProfile.characters || {});
+            // Set the new character as current
+            const characterKey = friendData.name.toLowerCase().replace(/\s+/g, '_');
+            if (data.userProfile.characters?.[characterKey]) {
+              setCurrentCharacter(data.userProfile.characters[characterKey]);
+            }
+          }
+        }
+        await loadSessions();
+      }
+    } catch (error) {
+      console.error('Error adding friend:', error);
+    }
+  };
+
+  const handleCharacterSelect = (character) => {
+    if (character && character.name !== currentCharacter?.name) {
+      setCurrentCharacter(character);
+      const characterKey = character.name.toLowerCase().replace(/\s+/g, '_');
+      loadMessages(characterKey);
+    }
+  };
 
   const createNewSession = () => {
     // Sessions are no longer used; keep welcome message optional
@@ -82,7 +199,7 @@ export default function Home() {
     if (messages.length === 0) {
       const welcomeMessage = {
         _id: uuidv4(),
-        message: "Hello! I&apos;m Tara, and I&apos;m here to listen and support you. Whether you&apos;re having a great day or going through something difficult, I&apos;m here for you. What&apos;s on your mind today? 💙",
+        message: `Hello! I&apos;m ${currentCharacter?.name || 'Tara'}, and I&apos;m here to listen and support you. Whether you&apos;re having a great day or going through something difficult, I&apos;m here for you. What&apos;s on your mind today? 💙`,
         sender: 'bot',
         timestamp: new Date()
       };
@@ -91,7 +208,7 @@ export default function Home() {
   };
 
   const sendMessage = async (messageText) => {
-    if (!messageText.trim() || isLoading) return;
+    if (!messageText.trim() || isLoading || !currentCharacter) return;
 
     setIsLoading(true);
     const userMessage = {
@@ -113,7 +230,8 @@ export default function Home() {
         },
         body: JSON.stringify({
           userId,
-          message: messageText
+          message: messageText,
+          characterName: currentCharacter.name
         })
       });
 
@@ -154,32 +272,35 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen w-7xl mx-auto bg-gradient-to-br from-pink-50 via-white to-purple-50">
-      {/* Sidebar */}
- 
+    <div className="flex h-screen w-full bg-gradient-to-br from-pink-50 via-white to-purple-50">
+      {/* Chat List Sidebar */}
+      <ChatList
+        characters={characters}
+        currentCharacter={currentCharacter}
+        onCharacterSelect={handleCharacterSelect}
+        onAddFriend={() => setShowAddFriendModal(true)}
+        isLoading={isLoading}
+      />
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col lg:ml-0 min-w-0">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur-sm border-b border-pink-100 px-6 py-4 lg:pl-6 pl-20">
+        <div className="bg-white/80 backdrop-blur-sm border-b border-pink-100 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center">
-                {/* <Heart className="w-4 h-4 text-white" /> */}
                 <Image
-  src="/profile.jpg"
-  alt="Tara"
-  width={96}
-  height={96}
-  className="rounded-full"
-/>
+                  src="/profile.jpg"
+                  alt={currentCharacter?.name || 'Tara'}
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                />
               </div>
               <div className="flex items-center gap-2">
-  <h2 className="font-semibold text-gray-800">Tara</h2>
-  <div className="bg-green-500 rounded-full w-2 h-2"></div>
-  {/* <p className="text-sm text-gray-500">Always here to listen</p> */}
-</div>
-
+                <h2 className="font-semibold text-gray-800">{currentCharacter?.name || 'Tara'}</h2>
+                <div className="bg-green-500 rounded-full w-2 h-2"></div>
+              </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Sparkles className="w-4 h-4" />
@@ -190,7 +311,14 @@ export default function Home() {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {messages.length === 0 ? (
+          {isLoadingMessages ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin w-8 h-8 border-4 border-pink-200 border-t-pink-500 rounded-full mx-auto mb-4"></div>
+                <p className="text-gray-500">Loading messages...</p>
+              </div>
+            </div>
+          ) : messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center max-w-md">
                 <div className="w-16 h-16 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -224,7 +352,7 @@ export default function Home() {
             <div className="flex justify-start mb-4">
               <div className="flex items-center gap-2 bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl px-4 py-3 border border-pink-100">
                 <Heart className="w-4 h-4 text-pink-500 animate-pulse" />
-                <span className="text-sm text-gray-600">Tara is thinking...</span>
+                <span className="text-sm text-gray-600">{currentCharacter?.name || 'Tara'} is thinking...</span>
               </div>
             </div>
           )}
@@ -235,9 +363,23 @@ export default function Home() {
         <ChatInput
           onSendMessage={sendMessage}
           isLoading={isLoading}
-          disabled={!currentSession}
+          disabled={!currentCharacter}
+          currentCharacter={currentCharacter}
         />
       </div>
+
+      {/* Modals */}
+      <UserProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        onSubmit={handleProfileSubmit}
+      />
+      
+      <AddFriendModal
+        isOpen={showAddFriendModal}
+        onClose={() => setShowAddFriendModal(false)}
+        onSubmit={handleAddFriend}
+      />
     </div>
   );
 }

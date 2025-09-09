@@ -1,22 +1,28 @@
 import { NextResponse } from 'next/server';
-import { getChats, getAllChatSessions } from '@/lib/mongodb';
+import { getChats, getAllChatSessions, getUserProfile, getCharacters } from '@/lib/mongodb';
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    const characterName = searchParams.get('characterName') || 'tara';
+    
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
-    const chats = await getChats(userId);
+    const chats = await getChats(userId, characterName);
     const sessions = await getAllChatSessions(userId);
+    const userProfile = await getUserProfile(userId);
+    const characters = await getCharacters(userId);
 
     return NextResponse.json({
       success: true,
       chats,
       count: chats.length,
-      sessions
+      sessions,
+      userProfile,
+      characters
     });
 
   } catch (error) {

@@ -53,14 +53,7 @@ export default function ChatInput({ onSendMessage, isLoading = false, disabled =
               : 'bg-gray-100 text-gray-400 cursor-not-allowed'
           }`}
         >
-          {isLoading ? (
-            <div className="animate-spin">
-              <Heart className="w-5 h-5" />
-              {/* <Image src="/profile.jpg" alt="Tara" width={20} height={20} /> */}
-            </div>
-          ) : (
-            <Send className="w-5 h-5" />
-          )}
+          <Send className="w-5 h-5" />
         </button>
       </form>
       

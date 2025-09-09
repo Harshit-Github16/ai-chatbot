@@ -76,16 +76,19 @@ export async function addCharacter(userId, { characterName, role }) {
   return result;
 }
 
-export async function saveChat(userId, characterName, { role, message, usermood, moodReason, createdAt }) {
+export async function saveChat(userId, characterName, { role, message, usermood, moodReason, createdAt, messageId }) {
   const { db } = await connectToDatabase();
+  const { ObjectId } = require('mongodb');
   const now = createdAt ? new Date(createdAt) : new Date();
   const characterKey = characterName.toLowerCase().replace(/\s+/g, '_');
+  const _id = messageId || new ObjectId().toString();
   
   const result = await db.collection('users').updateOne(
     { userId },
     {
       $push: {
         [`characters.${characterKey}.conversations`]: {
+          _id,
           role,
           message,
           usermood: usermood ?? null,
@@ -95,7 +98,7 @@ export async function saveChat(userId, characterName, { role, message, usermood,
       }
     }
   );
-  return result;
+  return { ...result, insertedId: _id };
 }
 
 export async function getChats(userId, characterName = 'tara') {
@@ -127,4 +130,54 @@ export async function getCharacters(userId) {
   const { db } = await connectToDatabase();
   const userDoc = await db.collection('users').findOne({ userId });
   return userDoc?.characters || {};
+}
+
+// Delete specific message from character's conversation
+export async function deleteMessage(userId, characterName, messageId) {
+  const { db } = await connectToDatabase();
+  const characterKey = characterName.toLowerCase().replace(/\s+/g, '_');
+  
+  const result = await db.collection('users').updateOne(
+    { userId },
+    {
+      $pull: {
+        [`characters.${characterKey}.conversations`]: {
+          _id: messageId
+        }
+      }
+    }
+  );
+  return result;
+}
+
+// Clear entire conversation history for a character
+export async function clearChatHistory(userId, characterName) {
+  const { db } = await connectToDatabase();
+  const characterKey = characterName.toLowerCase().replace(/\s+/g, '_');
+  
+  const result = await db.collection('users').updateOne(
+    { userId },
+    {
+      $set: {
+        [`characters.${characterKey}.conversations`]: []
+      }
+    }
+  );
+  return result;
+}
+
+// Delete entire character and all its data
+export async function deleteCharacter(userId, characterName) {
+  const { db } = await connectToDatabase();
+  const characterKey = characterName.toLowerCase().replace(/\s+/g, '_');
+  
+  const result = await db.collection('users').updateOne(
+    { userId },
+    {
+      $unset: {
+        [`characters.${characterKey}`]: ""
+      }
+    }
+  );
+  return result;
 }

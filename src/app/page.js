@@ -193,6 +193,51 @@ export default function Home() {
     }
   };
 
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      const response = await fetch('/api/chat/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          messageId,
+          characterName: currentCharacter?.name?.toLowerCase().replace(/\s+/g, '_') || 'tara'
+        })
+      });
+      
+      if (response.ok) {
+        // Remove message from local state
+        setMessages(prev => prev.filter(msg => msg._id !== messageId));
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error);
+    }
+  };
+
+  const handleDeleteChat = async (characterKey, character) => {
+    try {
+      const response = await fetch('/api/chat/clear', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          characterName: character?.name?.toLowerCase().replace(/\s+/g, '_') || characterKey
+        })
+      });
+      
+      if (response.ok) {
+        // If deleting current character's chat, clear messages
+        if (character?.name === currentCharacter?.name) {
+          setMessages([]);
+        }
+        // Refresh sessions
+        loadSessions();
+      }
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+    }
+  };
+
   const createNewSession = () => {
     // Sessions are no longer used; keep welcome message optional
     setSidebarOpen(false);
@@ -210,16 +255,17 @@ export default function Home() {
   const sendMessage = async (messageText) => {
     if (!messageText.trim() || isLoading || !currentCharacter) return;
 
-    setIsLoading(true);
     const userMessage = {
       _id: uuidv4(),
-      Reply: messageText,
-      Role: 'user',
+      message: messageText,
+      role: 'user',
       createdAt: new Date()
     };
 
     // Add user message immediately
     setMessages(prev => [...prev, userMessage]);
+    
+    setIsLoading(true);
 
     try {
       // Get bot response
@@ -279,6 +325,7 @@ export default function Home() {
         currentCharacter={currentCharacter}
         onCharacterSelect={handleCharacterSelect}
         onAddFriend={() => setShowAddFriendModal(true)}
+        onDeleteChat={handleDeleteChat}
         isLoading={isLoading}
       />
 
@@ -331,10 +378,16 @@ export default function Home() {
   className="rounded-full"
 />
                 </div>
-                <h3 className="text-lg font-medium text-gray-800 mb-2">Welcome to Tara</h3>
+                <h3 className="text-lg font-medium text-gray-800 mb-2">Welcome to {currentCharacter?.name || 'Tara'}</h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  I&apos;m here to be your supportive companion. Whether you want to share your thoughts, 
-                  talk through feelings, or just have someone to listen, I&apos;m here for you.
+                  {currentCharacter?.role === 'best_friend' && "I'm here as your best friend! Let's chat about anything - good days, tough times, or just random thoughts. I'm always here for you! 💕"}
+                  {currentCharacter?.role === 'mentor' && "I'm here as your mentor and guide. Whether you need advice, want to learn something new, or discuss your goals, I'm here to support your growth! 🎓"}
+                  {currentCharacter?.role === 'sister' && "Hey there! I'm here as your caring sister. We can talk about anything - family stuff, personal issues, or just catch up on life! 👭"}
+                  {currentCharacter?.role === 'brother' && "What's up! I'm here as your supportive brother. Whether you need advice, want to share something, or just hang out, I'm here! 👬"}
+                  {currentCharacter?.role === 'good_friend' && "I'm here as your good friend! Let's share stories, thoughts, and support each other through whatever life brings! 🤝"}
+                  {currentCharacter?.role === 'boyfriend' && "Hey babe! I'm here for you always. Whether you want to share your day, talk about dreams, or just spend time together, I love being here with you! 💙"}
+                  {currentCharacter?.role === 'girlfriend' && "Hi sweetie! I'm here for you always. Let's talk about our day, share our feelings, or just enjoy each other's company! 💕"}
+                  {!currentCharacter?.role && "I'm here to be your supportive companion. Whether you want to share your thoughts, talk through feelings, or just have someone to listen, I'm here for you."}
                 </p>
               </div>
             </div>
@@ -342,9 +395,11 @@ export default function Home() {
             messages.map((message, index) => (
               <ChatMessage
                 key={message._id || index}
-                message={message.message}
-                sender={message.role}
+                message={message.message || message.Reply}
+                sender={message.role || message.Role}
                 timestamp={message.createdAt}
+                messageId={message._id}
+                onDelete={handleDeleteMessage}
               />
             ))
           )}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateResponse } from '@/lib/gemini';
 import { getChats, saveChat, getUserProfile } from '@/lib/mongodb';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request) {
   try {
@@ -25,11 +26,25 @@ export async function POST(request) {
     // Generate AI response
     const botResponse = await generateResponse(message, conversationHistory, characterRole, userName);
 
-    // Save user message
-    await saveChat(userId, characterName, { role: 'user', message, createdAt: new Date().toISOString() });
+    // Save user message with unique ID
+    const userMessageId = uuidv4();
+    await saveChat(userId, characterName, { 
+      role: 'user', 
+      message, 
+      createdAt: new Date().toISOString(),
+      messageId: userMessageId
+    });
 
-    // Save bot response
-    await saveChat(userId, characterName, { role: 'bot', message: botResponse.Reply, usermood: botResponse.Mood, moodReason: botResponse.Reason, createdAt: botResponse.createdAt });
+    // Save bot response with unique ID
+    const botMessageId = uuidv4();
+    await saveChat(userId, characterName, { 
+      role: 'bot', 
+      message: botResponse.Reply, 
+      usermood: botResponse.Mood, 
+      moodReason: botResponse.Reason, 
+      createdAt: botResponse.createdAt,
+      messageId: botMessageId
+    });
 
     return NextResponse.json({
       success: true,

@@ -92,6 +92,8 @@ export async function generateResponse(userMessage, conversationHistory = [], ch
     - Always remember the user's name (${userName}) and use it in the response when appropriate.
     - Always remember the user's previous chats, ideas, and responses. Build on them naturally in future conversations.
     - Respond in the style of a ${character.description} - ${character.style}.
+    - Always respond in the language of the user.
+    
     
     Output format:
     {

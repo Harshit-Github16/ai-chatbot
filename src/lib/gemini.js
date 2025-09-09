@@ -1,10 +1,22 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is missing in environment variables');
-}
+// Use a random API key from the provided pool for each request
+const GEMINI_KEYS = [
+  'AIzaSyCg2yVbJSneW6FHjzyl5kkNcgDAWBU0kac',
+  'AIzaSyD7ZrirZGv1Nd6G-FtRCZpfUNJjb2zUDQ4',
+  'AIzaSyCBiSSEHQwshCNOtxHRxSeXj7-2I7nQUdc',
+  'AIzaSyA_f6LCDmoglVirYrYd_YT1nJht4UVL2UU'
+].filter(Boolean);
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+function getRandomGeminiClient() {
+  // Prefer .env key if present, else pick random from pool
+  const candidateKeys = [process.env.GEMINI_API_KEY, ...GEMINI_KEYS].filter(Boolean);
+  if (candidateKeys.length === 0) {
+    throw new Error('No Gemini API keys configured');
+  }
+  const randomKey = candidateKeys[Math.floor(Math.random() * candidateKeys.length)];
+  return new GoogleGenerativeAI(randomKey);
+}
 
 // Character-specific prompts
 const CHARACTER_PROMPTS = {
@@ -158,19 +170,19 @@ export async function generateResponse(userMessage, conversationHistory = [], ch
     
     
     
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-002' });
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.8,
-        topP: 0.9,
-        topK: 40,
-        maxOutputTokens: 256,
-        responseMimeType: 'application/json'
-      }
-    });
-    const text = result?.response?.text?.() || '';
+    const genAI = getRandomGeminiClient();
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const result = await model.generateContent(prompt);
 
+    // Yeh line galat hai
+    // const text = result?.response?.text?.() || '';
+    
+    // Sahi line
+    const text = await result.response.text();
+    
+    console.log("RAW GEMINI RESPONSE:", text);
+    
+ 
     // Parse JSON output
     let parsed;
     try {
@@ -196,14 +208,15 @@ export async function generateResponse(userMessage, conversationHistory = [], ch
 
     return parsed;
   } catch (error) {
-    console.error('Error generating response:', error);
+    console.error('Error generating response:', error?.message || error);
     const now = new Date().toISOString();
     const fallbackShort = userMessage.length > 120 ? userMessage.slice(0, 120) + '…' : userMessage;
     return {
-      Reply: `I got a hiccup processing that, but I\'m here. Tell me more about: "${fallbackShort}"`,
-      Mood: 'Neutral',
-      Reason: 'API or server error',
-      createdAt: now
-    };
+      Reply: "Lagta hai aaj ke liye quota khatam ho gaya 🫠, kal fir baat karte hain!",
+      Mood: "Neutral",
+      Reason: "Quota exceeded",
+      createdAt: new Date().toISOString()
+    }
+    
   }
 }

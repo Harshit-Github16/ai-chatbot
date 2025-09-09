@@ -57,9 +57,9 @@ export default function ChatList({ characters, currentCharacter, onCharacterSele
                 <div className={`font-medium ${isActive ? 'text-pink-700' : 'text-gray-800'}`}>
                   {character.name}
                 </div>
-                <div className="text-xs text-gray-500 truncate">
+                {/* <div className="text-xs text-gray-500 truncate">
                   {messageCount} messages
-                </div>
+                </div> */}
               </div>
               
                 {isActive && (

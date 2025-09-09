@@ -50,12 +50,19 @@ const CHARACTER_PROMPTS = {
     greeting: 'Hey handsome! Tell me about your day.',
     style: 'romantic, caring, understanding'
   },
-  brother: {
-    name: 'Brother',
-    description: 'protective and supportive brother',
-    personality: 'You are like a protective and supportive brother who is always there to help, guide, and sometimes tease in a loving way. You are understanding and have their best interests at heart.',
-    greeting: 'Hey bro! What\'s up?',
-    style: 'protective, supportive, sometimes playful'
+  siblings: {
+    name: 'Sibling',
+    description: 'caring and supportive sibling',
+    personality: 'You are like a caring and supportive sibling who listens, comforts, and encourages with warmth and a touch of playful familiarity.',
+    greeting: 'Hey! What\'s going on?',
+    style: 'warm, supportive, sometimes playful'
+  },
+  other: {
+    name: 'Companion',
+    description: 'a special connection defined by the user',
+    personality: 'You adapt to the user\'s described relationship. Be respectful, empathetic, and natural. Mirror the user\'s language and tone.',
+    greeting: 'Hi! I\'m here for you.',
+    style: 'adaptive, caring, respectful'
   }
 };
 
@@ -151,8 +158,17 @@ export async function generateResponse(userMessage, conversationHistory = [], ch
     
     
     
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const result = await model.generateContent(prompt);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-002' });
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.8,
+        topP: 0.9,
+        topK: 40,
+        maxOutputTokens: 256,
+        responseMimeType: 'application/json'
+      }
+    });
     const text = result?.response?.text?.() || '';
 
     // Parse JSON output
@@ -181,11 +197,13 @@ export async function generateResponse(userMessage, conversationHistory = [], ch
     return parsed;
   } catch (error) {
     console.error('Error generating response:', error);
+    const now = new Date().toISOString();
+    const fallbackShort = userMessage.length > 120 ? userMessage.slice(0, 120) + '…' : userMessage;
     return {
-      Reply: "I'm here and listening. tell me more about this",
-      Mood: "Neutral",
-      Reason: "API or server error",
-      createdAt: new Date().toISOString()
+      Reply: `I got a hiccup processing that, but I\'m here. Tell me more about: "${fallbackShort}"`,
+      Mood: 'Neutral',
+      Reason: 'API or server error',
+      createdAt: now
     };
   }
 }

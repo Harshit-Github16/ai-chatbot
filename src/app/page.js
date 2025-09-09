@@ -29,21 +29,25 @@ export default function Home() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   // Data loaders (declared before effects to avoid TDZ during render)
-  const loadSessions = useCallback(async (uid = userId) => {
+  const loadSessions = useCallback(async (uid = userId, shouldUpdateMessages = false, shouldUpdateCurrentCharacter = false) => {
     try {
       const response = await fetch(`/api/chat/get?userId=${uid}`);
       if (response.ok) {
         const data = await response.json();
         setSessions(data.sessions || []);
-        setMessages(data.chats || []);
+        
+        // Only update messages if explicitly requested (for initial load)
+        if (shouldUpdateMessages) {
+          setMessages(data.chats || []);
+        }
         
         // Update user profile and characters
         if (data.userProfile) {
           setUserProfile(data.userProfile);
           setCharacters(data.userProfile.characters || {});
           
-          // Set current character to Tara if available and no current character
-          if (data.userProfile.characters?.tara && !currentCharacter) {
+          // Only set current character to Tara if explicitly requested and no current character exists
+          if (shouldUpdateCurrentCharacter && data.userProfile.characters?.tara && !currentCharacter) {
             setCurrentCharacter(data.userProfile.characters.tara);
           }
         }
@@ -88,14 +92,14 @@ export default function Home() {
 
   useEffect(() => {
     if (userId) {
-      loadSessions(userId);
+      loadSessions(userId, true, true); // Update messages and character on initial load
     }
   }, [userId, loadSessions]);
 
-  // Load messages when session changes
+  // Load messages when currentCharacter changes
   useEffect(() => {
-    if (userId) {
-      loadMessages(currentCharacter?.name?.toLowerCase().replace(/\s+/g, '_') || 'tara');
+    if (userId && currentCharacter) {
+      loadMessages(currentCharacter.name.toLowerCase().replace(/\s+/g, '_'));
     }
   }, [userId, loadMessages, currentCharacter]);
 
@@ -141,7 +145,7 @@ export default function Home() {
       if (response.ok) {
         setUserProfile(profileData);
         setShowProfileModal(false);
-        await loadSessions();
+        await loadSessions(userId, false, false); // Just refresh sessions, don't change current chat
       } else {
         const errorData = await response.json();
         console.error('Profile creation error:', errorData);
@@ -178,7 +182,7 @@ export default function Home() {
             }
           }
         }
-        await loadSessions();
+        await loadSessions(userId, false, false); // Just refresh sessions, don't change current chat
       }
     } catch (error) {
       console.error('Error adding friend:', error);
@@ -188,8 +192,7 @@ export default function Home() {
   const handleCharacterSelect = (character) => {
     if (character && character.name !== currentCharacter?.name) {
       setCurrentCharacter(character);
-      const characterKey = character.name.toLowerCase().replace(/\s+/g, '_');
-      loadMessages(characterKey);
+      // loadMessages will be called by the useEffect automatically
     }
   };
 
@@ -231,7 +234,7 @@ export default function Home() {
           setMessages([]);
         }
         // Refresh sessions
-        loadSessions();
+        loadSessions(userId, false, false);
       }
     } catch (error) {
       console.error('Error deleting chat:', error);
@@ -293,8 +296,7 @@ export default function Home() {
         };
 
         setMessages(prev => [...prev, botMessage]);
-        // Refresh messages/sessions summary
-        loadSessions();
+        // Message count will be updated when user refreshes or switches characters
       } else {
         throw new Error('Failed to get response');
       }

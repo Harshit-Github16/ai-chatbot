@@ -182,7 +182,7 @@ export async function generateResponse(userMessage, conversationHistory = [], ch
   } catch (error) {
     console.error('Error generating response:', error);
     return {
-      Reply: "I'm here and listening, even though I'm having a technical hiccup. Can you tell me more about what's on your mind? 🌟",
+      Reply: "I'm here and listening. tell me more about this",
       Mood: "Neutral",
       Reason: "API or server error",
       createdAt: new Date().toISOString()

@@ -9,14 +9,13 @@ const GEMINI_KEYS = [
 ].filter(Boolean);
 
 function getRandomGeminiClient() {
-  // Prefer .env key if present, else pick random from pool
-  const candidateKeys = [process.env.GEMINI_API_KEY, ...GEMINI_KEYS].filter(Boolean);
-  if (candidateKeys.length === 0) {
+  if (GEMINI_KEYS.length === 0) {
     throw new Error('No Gemini API keys configured');
   }
-  const randomKey = candidateKeys[Math.floor(Math.random() * candidateKeys.length)];
+  const randomKey = GEMINI_KEYS[Math.floor(Math.random() * GEMINI_KEYS.length)];
   return new GoogleGenerativeAI(randomKey);
 }
+
 
 // Character-specific prompts
 const CHARACTER_PROMPTS = {

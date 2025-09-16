@@ -34,7 +34,7 @@ export default function MoodModal({ isOpen, onSelect }) {
       <div className="relative bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6">
         <div className="text-center mb-4">
           <h2 className="text-2xl font-bold text-gray-800">Mood Check-in</h2>
-          <p className="text-gray-600 mt-1">What's your current mood? Choose one to continue.</p>
+          <p className="text-gray-600 mt-1">What&apos;s your current mood? Choose one to continue.</p>
         </div>
 
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">

@@ -7,7 +7,7 @@ import ChatInput from '@/components/ChatInput';
 import UserProfileModal from '@/components/UserProfileModal';
 import AddFriendModal from '@/components/AddFriendModal';
 import ChatList from '@/components/ChatList';
-import { Heart, Sparkles } from 'lucide-react';
+import { Heart, Sparkles, Menu } from 'lucide-react';
 import Image from 'next/image';
 import MoodModal from '@/components/MoodModal';
 
@@ -398,7 +398,11 @@ export default function ChatPage() {
                 onClick={() => setSidebarOpen(true)}
                 aria-label="Open menu"
               >
-                <span className="block w-5 h-[2px] bg-gray-700 relative before:content-[''] before:absolute before:-top-2 before:w-5 before:h-[2px] before:bg-gray-700 after:content-[''] after:absolute after:top-2 after:w-5 after:h-[2px] after:bg-gray-700" />
+                 <Menu className="w-5 h-5 text-gray-700" />
+                {/* <span className="block w-5 h-[2px] bg-gray-700 relative before:content-[''] before:absolute before:-top-2 before:w-5 before:h-[2px] 
+                before:bg-gray-700 after:content-[''] after:absolute after:top-2 after:w-5 after:h-[2px] after:bg-gray-700" /> */}
+
+
               </button>
               <div className="w-8 h-8 rounded-full overflow-hidden">
                 <Image

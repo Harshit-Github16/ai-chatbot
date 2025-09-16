@@ -1,92 +1,74 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
+import { Plus, History } from 'lucide-react';
 
 export default function JournalingPage() {
   const [tags, setTags] = useState(['work', 'personal', 'ideas']);
   const [newTag, setNewTag] = useState('');
   const [activeTag, setActiveTag] = useState('work');
   const [content, setContent] = useState('');
-  const [userId, setUserId] = useState('');
-  const [isDirty, setIsDirty] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
   const contentRef = useRef(null);
 
-  useEffect(() => {
-    const id =
-      typeof window !== 'undefined' ? localStorage.getItem('tara_user_id') : '';
-    setUserId(id || '');
-  }, []);
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (isDirty) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [isDirty]);
-
+  // Add new tag
   const addTag = () => {
     const t = newTag.trim().toLowerCase();
     if (!t || tags.includes(t)) return;
     setTags([...tags, t]);
     setNewTag('');
     setActiveTag(t);
+    setShowModal(false);
   };
 
-  const save = async () => {
+  // Save entry
+  const save = () => {
     if (!activeTag || !content.trim()) return;
-    const res = await fetch('/api/journal/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, tag: activeTag, content }),
-    });
-    if (res.ok) {
-      setIsDirty(false);
-      setContent('');
-      if (contentRef.current) {
-        contentRef.current.innerHTML = '';
-      }
-      alert('Journal entry saved successfully!');
-    }
+    alert(`Saved for ${activeTag}!`);
+    setContent('');
+    if (contentRef.current) contentRef.current.innerHTML = '';
   };
 
+  // Formatting
   const execCommand = (command, value = null) => {
     document.execCommand(command, false, value);
-    if (contentRef.current) {
-      contentRef.current.focus();
-    }
+    if (contentRef.current) contentRef.current.focus();
   };
 
+  // Input handler
   const handleInput = (e) => {
     setContent(e.currentTarget.innerHTML);
-    setIsDirty(true);
+  };
+
+  // Toggle dummy history text
+  const toggleHistory = () => {
+    if (!historyVisible) {
+      const dummy = `<p><b>Past Reflection:</b> Today was productive. I completed my tasks and learned something new.</p>`;
+      setContent(dummy);
+      if (contentRef.current) contentRef.current.innerHTML = dummy;
+      setHistoryVisible(true);
+    } else {
+      setContent('');
+      if (contentRef.current) contentRef.current.innerHTML = '';
+      setHistoryVisible(false);
+    }
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 py-10">
-        {/* Header */}
-        <h1 className="text-4xl font-bold text-gray-900 mb-10 text-center">
-          ✨ My Journal
-        </h1>
-
+    <div className="bg-gray-50 min-h-screen py-10">
+      <div className="max-w-4xl mx-auto px-4">
         {/* Tag Section */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 mb-10">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            Choose or Add a Topic
-          </h2>
-          <div className="flex flex-wrap gap-3 mb-4">
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 mb-6 flex justify-between items-center">
+          <div className="flex flex-wrap gap-3">
             {tags.map((t) => (
               <button
                 key={t}
                 onClick={() => setActiveTag(t)}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 shadow-sm
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 shadow-sm
                   ${
                     activeTag === t
-                      ? 'bg-pink-600 text-white shadow-md'
+                      ? 'bg-gradient-to-r from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 text-pink-700 shadow-md'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
@@ -95,77 +77,57 @@ export default function JournalingPage() {
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <input
-              type="text"
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') addTag();
-              }}
-              placeholder="Add a new topic..."
-              className="flex-1 px-4 py-2 text-gray-700 bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition"
-            />
             <button
-              onClick={addTag}
-              className="bg-pink-100 hover:bg-pink-200 text-pink-700 rounded-lg px-5 py-2 font-medium transition"
+              onClick={() => setShowModal(true)}
+              className="p-2 rounded-full bg-pink-100 hover:bg-pink-200 text-pink-600 transition"
             >
-              Add
+              <Plus size={20} />
+            </button>
+            <button
+              onClick={toggleHistory}
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+            >
+              <History size={20} />
             </button>
           </div>
         </div>
 
-        {/* Text Editor Section */}
+        {/* Text Editor */}
         <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-semibold text-gray-800">
-              Writing under: <span className="text-pink-600">{activeTag}</span>
-            </h2>
+          <div className="flex justify-end items-center mb-4">
             <div className="flex gap-2">
               <button
                 onClick={() => execCommand('bold')}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-100 transition text-gray-700 font-bold"
+                className="p-2 border rounded-lg hover:bg-gray-100 font-bold"
               >
                 B
               </button>
               <button
                 onClick={() => execCommand('italic')}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-100 transition text-gray-700 italic"
+                className="p-2 border rounded-lg hover:bg-gray-100 italic"
               >
                 I
               </button>
               <button
                 onClick={() => execCommand('underline')}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-100 transition text-gray-700 underline"
+                className="p-2 border rounded-lg hover:bg-gray-100 underline"
               >
                 U
-              </button>
-              <button
-                onClick={() => execCommand('insertUnorderedList')}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-100 transition text-gray-700"
-              >
-                •
-              </button>
-              <button
-                onClick={() => execCommand('insertOrderedList')}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-100 transition text-gray-700"
-              >
-                1.
               </button>
             </div>
           </div>
 
-          {/* Editable content area */}
           <div className="relative">
             <div
               ref={contentRef}
               contentEditable
               onInput={handleInput}
-              className="min-h-[300px] border border-gray-200 rounded-lg px-5 py-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all prose max-w-none"
+              className="min-h-[46vh] border border-gray-200 rounded-lg px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-400 transition-all prose max-w-none"
               suppressContentEditableWarning
             />
             {content.length === 0 && (
-              <span className="absolute top-4 left-5 text-gray-400 pointer-events-none select-none">
-                Write your thoughts about "{activeTag}" here...
+              <span className="absolute top-3 left-4 text-gray-400 pointer-events-none select-none">
+                Write your thoughts here...
               </span>
             )}
           </div>
@@ -173,13 +135,44 @@ export default function JournalingPage() {
           <div className="flex justify-end mt-6">
             <button
               onClick={save}
-              className="bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded-lg px-6 py-3 shadow-md transition-all duration-200"
+              className="bg-gradient-to-r from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 text-pink-700 font-medium rounded-lg px-6 py-2 shadow-sm transition-all duration-200 text-sm"
             >
-              💾 Save Journal
+              Save
             </button>
           </div>
         </div>
       </div>
+
+      {/* Add Tag Modal */}
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-96">
+            <h2 className="text-lg font-semibold mb-4">Add New Tag</h2>
+            <input
+              type="text"
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addTag()}
+              placeholder="Enter tag name..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-400"
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 rounded-lg border hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addTag}
+                className="px-4 py-2 rounded-lg bg-gradient-to-r from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 text-pink-700 font-medium"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

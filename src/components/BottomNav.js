@@ -6,19 +6,19 @@ import { MessageCircle, User, Settings, Users, Target, BookOpen, BarChart3 } fro
 
 const tabs = [
   { href: '/chat', label: 'Chat', icon: MessageCircle, disabled: false },
-  { href: '/profile', label: 'Profile', icon: User, disabled: false },
-  { href: '/setting', label: 'Setting', icon: Settings, disabled: false },
+  { href: '/profile', label: 'Profile', icon: User, disabled: true },
+  // { href: '/setting', label: 'Setting', icon: Settings, disabled: false },
   { href: '/community', label: 'Community', icon: Users, disabled: true },
-  { href: '/goals', label: 'Goals', icon: Target, disabled: false },
+  { href: '/goals', label: 'Goals', icon: Target, disabled: true },
   { href: '/journaling', label: 'Journal', icon: BookOpen, disabled: false },
-  { href: '/insights', label: 'Insights', icon: BarChart3, disabled: false },
+  // { href: '/insights', label: 'Insights', icon: BarChart3, disabled: false },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur border-t border-gray-200">
-      <ul className="grid grid-cols-7">
+      <ul className="grid grid-cols-5">
         {tabs.map(({ href, label, icon: Icon, disabled }) => {
           const active = pathname === href;
           const base = 'flex flex-col items-center justify-center py-2 text-[11px]';

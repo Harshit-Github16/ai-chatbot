@@ -429,13 +429,15 @@ export default function ChatPage() {
         <div className="bg-white/80 backdrop-blur-sm border-b border-pink-100 px-4 md:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Mobile menu button */}
+    
               <button
                 className="md:hidden mr-1 rounded-lg border border-gray-200 w-9 h-9 flex items-center justify-center bg-white"
                 onClick={() => setSidebarOpen(true)}
                 aria-label="Open menu"
               >
-                <span className="block w-5 h-[2px] bg-gray-700 relative before:content-[''] before:absolute before:-top-2 before:w-5 before:h-[2px] before:bg-gray-700 after:content-[''] after:absolute after:top-2 after:w-5 after:h-[2px] after:bg-gray-700" />
+                <span className="block w-5 h-[2px] bg-gray-700 relative before:content-[''] 
+                before:absolute before:-top-2 before:w-5 before:h-[2px] before:bg-gray-700 after:content-[''] 
+                after:absolute after:top-2 after:w-5 after:h-[2px] after:bg-gray-700" />
               </button>
               <div className="w-8 h-8 rounded-full overflow-hidden">
                 <Image

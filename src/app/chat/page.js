@@ -1,15 +1,13 @@
-'use client';
+"use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import Sidebar from '@/components/Sidebar';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
 import UserProfileModal from '@/components/UserProfileModal';
 import AddFriendModal from '@/components/AddFriendModal';
-import CharacterSelector from '@/components/CharacterSelector';
 import ChatList from '@/components/ChatList';
-import { Heart, Sparkles, Plus } from 'lucide-react';
+import { Heart, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import MoodModal from '@/components/MoodModal';
 
@@ -38,8 +36,6 @@ export default function ChatPage() {
       if (response.ok) {
         const data = await response.json();
         setSessions(data.sessions || []);
-        
-        // Update user profile and characters only (never auto-set currentCharacter)
         if (data.userProfile) {
           setUserProfile(data.userProfile);
           setCharacters(data.userProfile.characters || {});
@@ -51,15 +47,12 @@ export default function ChatPage() {
   }, [userId]);
 
   const loadMessages = useCallback(async (characterName) => {
-    console.log('loadMessages called with character:', characterName);
-    if (!characterName) return; // Don't load if no character specified
-    
+    if (!characterName) return;
     setIsLoadingMessages(true);
     try {
       const response = await fetch(`/api/chat/get?userId=${userId}&characterName=${characterName}`);
       if (response.ok) {
         const data = await response.json();
-        console.log('Messages loaded for character:', characterName, 'count:', data.chats?.length || 0);
         setMessages(data.chats || []);
       }
     } catch (error) {
@@ -74,9 +67,8 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load sessions on component mount
+  // Ensure persistent userId in localStorage
   useEffect(() => {
-    // Ensure persistent userId in localStorage
     const existing = typeof window !== 'undefined' ? localStorage.getItem('tara_user_id') : null;
     if (existing) {
       setUserId(existing);
@@ -89,7 +81,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (userId) {
-      loadSessions(userId); // Only load sessions, don't auto-set character or messages
+      loadSessions(userId);
     }
   }, [userId, loadSessions]);
 
@@ -100,12 +92,9 @@ export default function ChatPage() {
     }
   }, [userId, loadMessages, currentCharacter]);
 
-  
-
   // Check if user needs profile setup
   useEffect(() => {
     if (userId && userProfile === null && !isLoading && isInitialLoad) {
-      // Check if user profile exists in database
       const checkUserProfile = async () => {
         try {
           const response = await fetch(`/api/user/profile?userId=${userId}`);
@@ -114,19 +103,16 @@ export default function ChatPage() {
             if (data.userProfile) {
               setUserProfile(data.userProfile);
               setCharacters(data.userProfile.characters || {});
-              
-              // Try to restore previously selected character from localStorage
+
               if (!currentCharacter) {
                 const savedCharacter = typeof window !== 'undefined' ? localStorage.getItem('tara_selected_character') : null;
                 if (savedCharacter) {
                   try {
                     const parsedCharacter = JSON.parse(savedCharacter);
-                    // Verify the character still exists in user's characters
                     const characterKey = parsedCharacter.name.toLowerCase().replace(/\s+/g, '_');
                     if (data.userProfile.characters?.[characterKey]) {
                       setCurrentCharacter(data.userProfile.characters[characterKey]);
                     } else {
-                      // If saved character doesn't exist, set first available
                       const availableCharacters = data.userProfile.characters || {};
                       const firstCharacterKey = Object.keys(availableCharacters)[0];
                       if (firstCharacterKey && availableCharacters[firstCharacterKey]) {
@@ -134,7 +120,6 @@ export default function ChatPage() {
                       }
                     }
                   } catch (e) {
-                    // If parsing fails, set first available character
                     const availableCharacters = data.userProfile.characters || {};
                     const firstCharacterKey = Object.keys(availableCharacters)[0];
                     if (firstCharacterKey && availableCharacters[firstCharacterKey]) {
@@ -142,7 +127,6 @@ export default function ChatPage() {
                     }
                   }
                 } else {
-                  // No saved character, set first available
                   const availableCharacters = data.userProfile.characters || {};
                   const firstCharacterKey = Object.keys(availableCharacters)[0];
                   if (firstCharacterKey && availableCharacters[firstCharacterKey]) {
@@ -164,25 +148,55 @@ export default function ChatPage() {
     }
   }, [userId, userProfile, isLoading, isInitialLoad, currentCharacter]);
 
-  // Show Mood modal after profile is ready (no close button; only closes on selection)
+  // Mood modal with 2-hour rule: compare last mood vs last chat time
   useEffect(() => {
-    if (userId && userProfile && !showProfileModal) {
-      setShowMoodModal(true);
-    }
-  }, [userId, userProfile, showProfileModal]);
+    const checkMoodPrompt = async () => {
+      if (!userId || !userProfile) return;
+      try {
+        // latest mood
+        const moodRes = await fetch(`/api/mood/latest?userId=${userId}`);
+        const moodJson = moodRes.ok ? await moodRes.json() : { latest: null };
+        const lastMoodAt = moodJson.latest?.createdAt ? new Date(moodJson.latest.createdAt).getTime() : 0;
 
-  const handleMoodSelect = (mood) => {
+        // last chat across sessions
+        const lastChatAt = sessions.reduce((maxTs, s) => {
+          const ts = s.lastTimestamp ? new Date(s.lastTimestamp).getTime() : 0;
+          return Math.max(maxTs, ts);
+        }, 0);
+
+        const lastActivity = Math.max(lastMoodAt, lastChatAt);
+        const now = Date.now();
+        const twoHoursMs = 2 * 60 * 60 * 1000;
+        const shouldAsk = lastActivity === 0 || now - lastActivity > twoHoursMs;
+        setShowMoodModal(shouldAsk);
+      } catch (e) {
+        // fallback to show
+        setShowMoodModal(true);
+      }
+    };
+    checkMoodPrompt();
+  }, [userId, userProfile, sessions]);
+
+  const handleMoodSelect = async (mood) => {
     try {
       setSelectedMood(mood);
+      const payload = {
+        userId,
+        key: mood.key,
+        label: mood.label,
+        emoji: mood.emoji,
+        selectedAt: new Date().toISOString(),
+      };
       if (typeof window !== 'undefined') {
-        localStorage.setItem('tara_current_mood', JSON.stringify({
-          ...mood,
-          userId,
-          selectedAt: new Date().toISOString(),
-        }));
+        localStorage.setItem('tara_current_mood', JSON.stringify(payload));
       }
+      await fetch('/api/mood/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
     } catch (e) {
-      // ignore storage errors
+      // ignore
     } finally {
       setShowMoodModal(false);
     }
@@ -195,11 +209,9 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, ...profileData })
       });
-      
       if (response.ok) {
         setUserProfile(profileData);
         setShowProfileModal(false);
-        // No need to reload sessions here - profile is already updated
       } else {
         const errorData = await response.json();
         console.error('Profile creation error:', errorData);
@@ -222,23 +234,19 @@ export default function ChatPage() {
           description: friendData.role === 'other' ? friendData.description : undefined
         })
       });
-      
       if (response.ok) {
-        // Refresh user profile and characters
         const profileResponse = await fetch(`/api/user/profile?userId=${userId}`);
         if (profileResponse.ok) {
           const data = await profileResponse.json();
           if (data.userProfile) {
             setUserProfile(data.userProfile);
             setCharacters(data.userProfile.characters || {});
-            // Set the new character as current
             const characterKey = friendData.name.toLowerCase().replace(/\s+/g, '_');
             if (data.userProfile.characters?.[characterKey]) {
               setCurrentCharacter(data.userProfile.characters[characterKey]);
             }
           }
         }
-        // No need to reload sessions - characters are already updated
       }
     } catch (error) {
       console.error('Error adding friend:', error);
@@ -246,22 +254,14 @@ export default function ChatPage() {
   };
 
   const handleCharacterSelect = (character) => {
-    console.log('Character selected:', character);
     if (character && character.name !== currentCharacter?.name) {
-      console.log('Setting current character to:', character.name);
-      
-      // Clear current messages immediately to show loading state
       setMessages([]);
       setIsLoadingMessages(true);
-      
       setCurrentCharacter(character);
-      // Close mobile sidebar on selection
       setSidebarOpen(false);
-      // Save selected character to localStorage
       if (typeof window !== 'undefined') {
         localStorage.setItem('tara_selected_character', JSON.stringify(character));
       }
-      // loadMessages will be called by the useEffect automatically
     }
   };
 
@@ -276,9 +276,7 @@ export default function ChatPage() {
           characterName: currentCharacter?.name?.toLowerCase().replace(/\s+/g, '_')
         })
       });
-      
       if (response.ok) {
-        // Remove message from local state
         setMessages(prev => prev.filter(msg => msg._id !== messageId));
       }
     } catch (error) {
@@ -296,62 +294,36 @@ export default function ChatPage() {
           characterName: character?.name?.toLowerCase().replace(/\s+/g, '_') || characterKey
         })
       });
-      
       if (response.ok) {
-        // If deleting current character's chat, clear messages
         if (character?.name === currentCharacter?.name) {
           setMessages([]);
         }
-        // No need to refresh sessions - just update message count display in sidebar will be handled by ChatList
       }
     } catch (error) {
       console.error('Error deleting chat:', error);
     }
   };
 
-  const createNewSession = () => {
-    // Sessions are no longer used; keep welcome message optional
-    setSidebarOpen(false);
-    if (messages.length === 0) {
-      const welcomeMessage = {
-        _id: uuidv4(),
-        message: `Hello! I&apos;m ${currentCharacter?.name || 'Tara'}, and I&apos;m here to listen and support you. Whether you&apos;re having a great day or going through something difficult, I&apos;m here for you. What&apos;s on your mind today? 💙`,
-        sender: 'bot',
-        timestamp: new Date()
-      };
-      setMessages([welcomeMessage]);
-    }
-  };
-
   const sendMessage = async (messageText) => {
     if (!messageText.trim() || isLoading || !currentCharacter) return;
-
     const userMessage = {
       _id: uuidv4(),
       message: messageText,
       role: 'user',
       createdAt: new Date()
     };
-
-    // Add user message immediately
     setMessages(prev => [...prev, userMessage]);
-    
     setIsLoading(true);
-
     try {
-      // Get bot response
       const response = await fetch('/api/chat/respond', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
           message: messageText,
           characterName: currentCharacter.name
         })
       });
-
       if (response.ok) {
         const data = await response.json();
         const botMessage = {
@@ -362,9 +334,7 @@ export default function ChatPage() {
           role: 'bot',
           createdAt: new Date(data.response.createdAt)
         };
-
         setMessages(prev => [...prev, botMessage]);
-        // Message count will be updated when user refreshes or switches characters
       } else {
         throw new Error('Failed to get response');
       }
@@ -372,7 +342,7 @@ export default function ChatPage() {
       console.error('Error sending message:', error);
       const errorMessage = {
         _id: uuidv4(),
-        message: "I&apos;m sorry, I&apos;m having trouble responding right now. But I want you to know that I&apos;m here for you, and your feelings matter. Please try again in a moment. 💙",
+        message: "I&apos;m sorry, I&apos;m having trouble responding right now.",
         role: 'bot',
         createdAt: new Date()
       };
@@ -380,11 +350,6 @@ export default function ChatPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const selectSession = () => {
-    // No-op since sessions are not used
-    setSidebarOpen(false);
   };
 
   return (
@@ -403,12 +368,10 @@ export default function ChatPage() {
 
       {/* Mobile Sidebar Drawer */}
       <div className={`md:hidden fixed inset-0 z-40 ${sidebarOpen ? '' : 'pointer-events-none'}`}>
-        {/* Overlay */}
         <div
           className={`absolute inset-0 bg-black/40 transition-opacity ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}
           onClick={() => setSidebarOpen(false)}
         />
-        {/* Drawer */}
         <div
           className={`absolute left-0 top-0 h-full w-80 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
@@ -471,7 +434,6 @@ export default function ChatPage() {
             <div className="flex items-center justify-center h-full">
               <div className="text-center max-w-md">
                 <div className="w-16 h-16 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  {/* <Heart className="w-8 h-8 text-white" /> */}
                   <Image
                     src={currentCharacter?.image || '/profile.jpg'}
                     alt={currentCharacter?.name || 'Tara'}
@@ -531,18 +493,16 @@ export default function ChatPage() {
         onClose={() => setShowProfileModal(false)}
         onSubmit={handleProfileSubmit}
       />
-      
       <AddFriendModal
         isOpen={showAddFriendModal}
         onClose={() => setShowAddFriendModal(false)}
         onSubmit={handleAddFriend}
       />
-
-      <MoodModal
-        isOpen={showMoodModal}
-        onSelect={handleMoodSelect}
-      />
+      <MoodModal isOpen={showMoodModal} onSelect={handleMoodSelect} />
     </div>
   );
 }
+
+// export { default } from '../page';
+
 

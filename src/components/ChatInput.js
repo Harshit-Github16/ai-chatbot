@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Heart } from 'lucide-react';
-import Image from 'next/image';
+import { Send } from 'lucide-react';
+
 
 export default function ChatInput({ onSendMessage, isLoading = false, disabled = false, currentCharacter = null }) {
   const [message, setMessage] = useState('');
@@ -48,10 +48,7 @@ export default function ChatInput({ onSendMessage, isLoading = false, disabled =
             }}
           />
           
-          {/* Character count indicator */}
-          <div className="absolute bottom-2 right-12 text-xs text-gray-400">
-            {message.length}/1000
-          </div>
+      
         </div>
         
         <button
@@ -68,29 +65,7 @@ export default function ChatInput({ onSendMessage, isLoading = false, disabled =
       </form>
       
       {/* Emotional support prompts */}
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          onClick={() => !isLoading && !disabled && onSendMessage("I\'m feeling a bit overwhelmed today")}
-          disabled={isLoading || disabled}
-          className="px-3 py-1.5 text-xs bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-600 rounded-full border border-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          I&apos;m feeling overwhelmed
-        </button>
-        <button
-          onClick={() => !isLoading && !disabled && onSendMessage("I could use someone to talk to")}
-          disabled={isLoading || disabled}
-          className="px-3 py-1.5 text-xs bg-gradient-to-r from-pink-50 to-purple-50 hover:from-pink-100 hover:to-purple-100 text-pink-600 rounded-full border border-pink-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          I need someone to talk to
-        </button>
-        <button
-          onClick={() => !isLoading && !disabled && onSendMessage("How are you doing today?")}
-          disabled={isLoading || disabled}
-          className="px-3 py-1.5 text-xs bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 text-green-600 rounded-full border border-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Just saying hi
-        </button>
-      </div>
+     
     </div>
   );
 }

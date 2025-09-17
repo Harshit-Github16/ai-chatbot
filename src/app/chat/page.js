@@ -7,12 +7,13 @@ import ChatInput from '@/components/ChatInput';
 import UserProfileModal from '@/components/UserProfileModal';
 import AddFriendModal from '@/components/AddFriendModal';
 import ChatList from '@/components/ChatList';
-import { Heart, Sparkles, Menu } from 'lucide-react';
+import { Heart, Sparkles, Menu, Edit } from 'lucide-react';
 import Image from 'next/image';
 import MoodModal from '@/components/MoodModal';
-
+import EditCharacterModal from "@/components/EditChartModel";
 export default function ChatPage() {
   const [currentSession, setCurrentSession] = useState('all');
+  const [showEditModal, setShowEditModal] = useState(false);
   const [messages, setMessages] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -351,7 +352,29 @@ export default function ChatPage() {
       setIsLoading(false);
     }
   };
-
+  const handleEditCharacter = async (updatedCharacter) => {
+    try {
+      const response = await fetch('/api/character/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          characterName: currentCharacter?.name?.toLowerCase().replace(/\s+/g, '_'),
+          updatedData: updatedCharacter
+        })
+      });
+      if (response.ok) {
+        setCurrentCharacter(updatedCharacter);
+        setCharacters((prev) => ({
+          ...prev,
+          [updatedCharacter.name.toLowerCase().replace(/\s+/g, '_')]: updatedCharacter
+        }));
+        setShowEditModal(false);
+      }
+    } catch (error) {
+      console.error("Error updating character:", error);
+    }
+  };
   return (
     <div className="flex h-screen w-full bg-gradient-to-br from-pink-50 via-white to-purple-50">
       {/* Desktop Sidebar */}
@@ -419,14 +442,17 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Sparkles className="w-4 h-4" />
-              <span>Emotional Support</span>
+            <Edit 
+  className="w-4 h-4 cursor-pointer"
+  onClick={() => setShowEditModal(true)}
+/>
+              
             </div>
           </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 ">
           {isLoadingMessages ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -483,12 +509,14 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <ChatInput
+     <div className="sticky bottom-0 bg-white/80 backdrop-blur-sm border-t border-pink-100 pb-10">
+     <ChatInput
           onSendMessage={sendMessage}
           isLoading={isLoading}
           disabled={!currentCharacter}
           currentCharacter={currentCharacter}
         />
+     </div>
       </div>
 
       {/* Modals */}
@@ -503,6 +531,12 @@ export default function ChatPage() {
         onSubmit={handleAddFriend}
       />
       <MoodModal isOpen={showMoodModal} onSelect={handleMoodSelect} />
+      <EditCharacterModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        character={currentCharacter}
+        onSubmit={handleEditCharacter}
+      />
     </div>
   );
 }

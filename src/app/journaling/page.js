@@ -12,7 +12,6 @@ export default function JournalingPage() {
   const [historyVisible, setHistoryVisible] = useState(false);
   const contentRef = useRef(null);
 
-  // Add new tag
   const addTag = () => {
     const t = newTag.trim().toLowerCase();
     if (!t || tags.includes(t)) return;
@@ -22,7 +21,6 @@ export default function JournalingPage() {
     setShowModal(false);
   };
 
-  // Save entry
   const save = () => {
     if (!activeTag || !content.trim()) return;
     alert(`Saved for ${activeTag}!`);
@@ -30,18 +28,15 @@ export default function JournalingPage() {
     if (contentRef.current) contentRef.current.innerHTML = '';
   };
 
-  // Formatting
   const execCommand = (command, value = null) => {
     document.execCommand(command, false, value);
     if (contentRef.current) contentRef.current.focus();
   };
 
-  // Input handler
   const handleInput = (e) => {
     setContent(e.currentTarget.innerHTML);
   };
 
-  // Toggle dummy history text
   const toggleHistory = () => {
     if (!historyVisible) {
       const dummy = `<p><b>Past Reflection:</b> Today was productive. I completed my tasks and learned something new.</p>`;
@@ -56,27 +51,27 @@ export default function JournalingPage() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen py-10">
+    <div className="bg-gray-50 min-h-screen py-4">
       <div className="max-w-4xl mx-auto px-4">
-        {/* Tag Section */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 mb-6 flex justify-between items-center">
-          <div className="flex flex-wrap gap-3">
-            {tags.map((t) => (
-              <button
-                key={t}
-                onClick={() => setActiveTag(t)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 shadow-sm
-                  ${
-                    activeTag === t
-                      ? 'bg-gradient-to-r from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 text-pink-700 shadow-md'
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 h-[90vh]">
+          
+          {/* Tags + Actions Row */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex gap-3">
+              {tags.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setActiveTag(t)}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all
+                    ${activeTag === t
+                      ? 'bg-gradient-to-r from-pink-100 to-pink-200 text-pink-700 shadow-md'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-3">
+                    }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => setShowModal(true)}
               className="p-2 rounded-full bg-pink-100 hover:bg-pink-200 text-pink-600 transition"
@@ -90,39 +85,37 @@ export default function JournalingPage() {
               <History size={20} />
             </button>
           </div>
-        </div>
 
-        {/* Text Editor */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6">
-          <div className="flex justify-end items-center mb-4">
-            <div className="flex gap-2">
-              <button
-                onClick={() => execCommand('bold')}
-                className="p-2 border rounded-lg hover:bg-gray-100 font-bold"
-              >
-                B
-              </button>
-              <button
-                onClick={() => execCommand('italic')}
-                className="p-2 border rounded-lg hover:bg-gray-100 italic"
-              >
-                I
-              </button>
-              <button
-                onClick={() => execCommand('underline')}
-                className="p-2 border rounded-lg hover:bg-gray-100 underline"
-              >
-                U
-              </button>
-            </div>
+          {/* Toolbar Row */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => execCommand('bold')}
+              className="p-2 border rounded-lg hover:bg-gray-100 font-bold"
+            >
+              B
+            </button>
+            <button
+              onClick={() => execCommand('italic')}
+              className="p-2 border rounded-lg hover:bg-gray-100 italic"
+            >
+              I
+            </button>
+            <button
+              onClick={() => execCommand('underline')}
+              className="p-2 border rounded-lg hover:bg-gray-100 underline"
+            >
+              U
+            </button>
           </div>
 
+          {/* Editor Box */}
           <div className="relative">
             <div
               ref={contentRef}
               contentEditable
               onInput={handleInput}
-              className="min-h-[46vh] border border-gray-200 rounded-lg px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-400 transition-all prose max-w-none"
+              className="min-h-[46vh] border border-gray-200 rounded-lg px-4 py-3 text-gray-800 focus:outline-none focus:ring-2
+               focus:ring-pink-400 transition-all prose max-w-none h-[61vh]"
               suppressContentEditableWarning
             />
             {content.length === 0 && (
@@ -141,38 +134,38 @@ export default function JournalingPage() {
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Add Tag Modal */}
-      {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-96">
-            <h2 className="text-lg font-semibold mb-4">Add New Tag</h2>
-            <input
-              type="text"
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addTag()}
-              placeholder="Enter tag name..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-400"
-            />
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 rounded-lg border hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={addTag}
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 text-pink-700 font-medium"
-              >
-                Save
-              </button>
+        {/* Add Tag Modal */}
+        {showModal && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+            <div className="bg-white rounded-xl shadow-lg p-6 w-96">
+              <h2 className="text-lg font-semibold mb-4">Add New Tag</h2>
+              <input
+                type="text"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addTag()}
+                placeholder="Enter tag name..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-400"
+              />
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 rounded-lg border hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={addTag}
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 text-pink-700 font-medium"
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

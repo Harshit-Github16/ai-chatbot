@@ -54,7 +54,7 @@ export default function AddFriendModal({ isOpen, onClose, onSubmit }) {
 
   return (
     <div className="fixed inset-0  flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl transform transition-all duration-300 scale-100">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl transform transition-all duration-300 scale-100 overflow-y-auto max-h-[80vh]">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-800">Add a New Friend</h2>
           <button

@@ -6,11 +6,12 @@ import { MessageCircle, User, Settings, Users, Target, BookOpen, BarChart3 } fro
 
 const tabs = [
   { href: '/chat', label: 'Chat', icon: MessageCircle, disabled: false },
-  { href: '/profile', label: 'Profile', icon: User, disabled: true },
+
   // { href: '/setting', label: 'Setting', icon: Settings, disabled: false },
+  { href: '/journaling', label: 'Journal', icon: BookOpen, disabled: false },
   { href: '/community', label: 'Community', icon: Users, disabled: true },
   { href: '/goals', label: 'Goals', icon: Target, disabled: true },
-  { href: '/journaling', label: 'Journal', icon: BookOpen, disabled: false },
+  { href: '/profile', label: 'Profile', icon: User, disabled: true },
   // { href: '/insights', label: 'Insights', icon: BarChart3, disabled: false },
 ];
 

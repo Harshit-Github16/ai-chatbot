@@ -8,10 +8,11 @@ const tabs = [
   { href: '/chat', label: 'Chat', icon: MessageCircle, disabled: false },
 
   // { href: '/setting', label: 'Setting', icon: Settings, disabled: false },
-  { href: '/journaling', label: 'Journal', icon: BookOpen, disabled: false },
   { href: '/community', label: 'Community', icon: Users, disabled: true },
+  { href: '/journaling', label: 'Journal', icon: BookOpen, disabled: false },
+
   { href: '/goals', label: 'Goals', icon: Target, disabled: true },
-  { href: '/profile', label: 'Profile', icon: User, disabled: true },
+  { href: '/profile', label: 'Profile', icon: User, disabled: false },
   // { href: '/insights', label: 'Insights', icon: BarChart3, disabled: false },
 ];
 

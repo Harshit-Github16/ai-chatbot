@@ -45,13 +45,37 @@ export default function EditCharacterModal({ isOpen, onClose, character, onSubmi
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600">Image URL</label>
-              <input
-                type="text"
-                value={image}
-                onChange={(e) => setImage(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring focus:ring-pink-300"
-              />
+              <label className="block text-sm text-gray-600">Image</label>
+              <div className="mt-2 flex items-center gap-3">
+                <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={image || '/profile.jpg'} alt="preview" className="w-full h-full object-cover" />
+                </div>
+                <label className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                        const data = await res.json();
+                        if (res.ok && data?.url) {
+                          setImage(data.url);
+                        }
+                      } catch (err) {
+                        // ignore for now
+                      }
+                    }}
+                  />
+                  <span>Upload</span>
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">PNG, JPG up to 2MB.</p>
             </div>
 
             <div>

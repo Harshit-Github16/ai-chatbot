@@ -196,6 +196,51 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      // After saving mood, send a greeting from Tara tailored to the mood
+      const characterKey = currentCharacter?.name?.toLowerCase().replace(/\s+/g, '_') || 'tara';
+      const speakerName = currentCharacter?.name || 'Tara';
+
+      const moodGreetings = {
+        happy: 'Waah, mood badiya lag raha hai! Kis baat par itni khushi? 😊',
+        sad: 'Aaj thoda halka sa udaas lag rahe ho… kya hua? Main hoon na. 💙',
+        calm: 'Shanti achchi lag rahi hogi. Aaj ka din kaise guzar raha hai? 😌',
+        stressed: 'Lagta hai pressure zyada hai… chalo saath milkar halka karte hain. 😌',
+        confused: 'Thoda confusion sa lag raha hai—batao, kis cheez mein atke ho? 🤔',
+        angry: 'Gussa aa raha hai… chalo saath saath isse handle karte hain. 🔥',
+        funny: 'Hahaha, mood full on mast! Kya aisa hua jo itna funny tha? 😂',
+        surprise: 'Arre wah, kuch unexpected! Kya surprise mila? 😮'
+      };
+
+      const defaultGreeting = 'Hey, kaisa lag raha hai abhi? Main yahin hoon tumhare saath.';
+      const greetingText = moodGreetings[mood.key] || defaultGreeting;
+
+      const botMessage = {
+        _id: uuidv4(),
+        message: greetingText,
+        role: 'bot',
+        createdAt: new Date()
+      };
+      setMessages((prev) => [...prev, botMessage]);
+
+      // Persist the greeting in chat history
+      try {
+        await fetch('/api/chat/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            characterName: speakerName,
+            role: 'bot',
+            message: greetingText,
+            usermood: mood.label,
+            moodReason: `Greeting based on mood: ${mood.key}`,
+            createdAt: new Date().toISOString()
+          })
+        });
+      } catch (e) {
+        // non-blocking
+      }
     } catch (e) {
       // ignore
     } finally {

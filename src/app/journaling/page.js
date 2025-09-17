@@ -51,18 +51,18 @@ export default function JournalingPage() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen py-4">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 h-[90vh]">
+    <div className="bg-gray-50 min-h-screen py-3 sm:py-4">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4">
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-4 sm:p-6 h-auto min-h-[70vh] md:min-h-[80vh] lg:min-h-[85vh]">
           
           {/* Tags + Actions Row */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               {tags.map((t) => (
                 <button
                   key={t}
                   onClick={() => setActiveTag(t)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all
+                  className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all
                     ${activeTag === t
                       ? 'bg-gradient-to-r from-pink-100 to-pink-200 text-pink-700 shadow-md'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -74,20 +74,20 @@ export default function JournalingPage() {
             </div>
             <button
               onClick={() => setShowModal(true)}
-              className="p-2 rounded-full bg-pink-100 hover:bg-pink-200 text-pink-600 transition"
+              className="p-1.5 sm:p-2 rounded-full bg-pink-100 hover:bg-pink-200 text-pink-600 transition"
             >
               <Plus size={20} />
             </button>
             <button
               onClick={toggleHistory}
-              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+              className="p-1.5 sm:p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
             >
               <History size={20} />
             </button>
           </div>
 
           {/* Toolbar Row */}
-          <div className="flex gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-3 sm:mb-4">
             <button
               onClick={() => execCommand('bold')}
               className="p-2 border rounded-lg hover:bg-gray-100 font-bold"
@@ -114,21 +114,21 @@ export default function JournalingPage() {
               ref={contentRef}
               contentEditable
               onInput={handleInput}
-              className="min-h-[46vh] border border-gray-200 rounded-lg px-4 py-3 text-gray-800 focus:outline-none focus:ring-2
-               focus:ring-pink-400 transition-all prose max-w-none h-[61vh]"
+              className="min-h-[40vh] sm:min-h-[46vh] border border-gray-200 rounded-lg px-3 sm:px-4 py-3 text-gray-800 focus:outline-none focus:ring-2
+               focus:ring-pink-400 transition-all prose max-w-none h-[55vh] sm:h-[61vh] overflow-y-auto"
               suppressContentEditableWarning
             />
             {content.length === 0 && (
-              <span className="absolute top-3 left-4 text-gray-400 pointer-events-none select-none">
+              <span className="absolute top-3 left-4 text-gray-400 pointer-events-none select-none text-sm sm:text-base">
                 Write your thoughts here...
               </span>
             )}
           </div>
 
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-end mt-5 sm:mt-6">
             <button
               onClick={save}
-              className="bg-gradient-to-r from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 text-pink-700 font-medium rounded-lg px-6 py-2 shadow-sm transition-all duration-200 text-sm"
+              className="bg-gradient-to-r from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 text-pink-700 font-medium rounded-lg px-5 sm:px-6 py-2 shadow-sm transition-all duration-200 text-sm w-full sm:w-auto"
             >
               Save
             </button>
@@ -137,8 +137,8 @@ export default function JournalingPage() {
 
         {/* Add Tag Modal */}
         {showModal && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-            <div className="bg-white rounded-xl shadow-lg p-6 w-96">
+          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 px-3">
+            <div className="bg-white rounded-xl shadow-lg p-5 sm:p-6 w-[90%] max-w-sm sm:max-w-md md:w-96">
               <h2 className="text-lg font-semibold mb-4">Add New Tag</h2>
               <input
                 type="text"
@@ -148,7 +148,7 @@ export default function JournalingPage() {
                 placeholder="Enter tag name..."
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-400"
               />
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-wrap justify-end gap-2 sm:gap-3">
                 <button
                   onClick={() => setShowModal(false)}
                   className="px-4 py-2 rounded-lg border hover:bg-gray-100"

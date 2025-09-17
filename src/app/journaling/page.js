@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Plus, History } from 'lucide-react';
 
 export default function JournalingPage() {
@@ -8,9 +8,35 @@ export default function JournalingPage() {
   const [newTag, setNewTag] = useState('');
   const [activeTag, setActiveTag] = useState('work');
   const [content, setContent] = useState('');
+  const [userId, setUserId] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const contentRef = useRef(null);
+
+  useEffect(() => {
+    const id = typeof window !== 'undefined' ? localStorage.getItem('tara_user_id') : '';
+    setUserId(id || '');
+  }, []);
+
+  // Load latest entry for active tag when userId or tag changes
+  useEffect(() => {
+    const load = async () => {
+      if (!userId || !activeTag) return;
+      try {
+        const res = await fetch(`/api/journal/list?userId=${encodeURIComponent(userId)}&tag=${encodeURIComponent(activeTag)}&limit=1`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const latest = data?.entries?.[0]?.content || '';
+        setContent(latest);
+        if (contentRef.current) contentRef.current.innerHTML = latest;
+      } catch (_) {
+        // ignore
+      }
+    };
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, activeTag]);
 
   const addTag = () => {
     const t = newTag.trim().toLowerCase();
@@ -21,11 +47,29 @@ export default function JournalingPage() {
     setShowModal(false);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!activeTag || !content.trim()) return;
-    alert(`Saved for ${activeTag}!`);
-    setContent('');
-    if (contentRef.current) contentRef.current.innerHTML = '';
+    if (!userId) {
+      alert('User not found. Please set up your profile first.');
+      return;
+    }
+    try {
+      setIsSaving(true);
+      const res = await fetch('/api/journal/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, tag: activeTag, content })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed to save');
+      alert(`Saved for ${activeTag}!`);
+      setContent('');
+      if (contentRef.current) contentRef.current.innerHTML = '';
+    } catch (e) {
+      alert(e.message || 'Something went wrong while saving');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const execCommand = (command, value = null) => {
@@ -128,9 +172,10 @@ export default function JournalingPage() {
           <div className="flex justify-end mt-5 sm:mt-6">
             <button
               onClick={save}
-              className="bg-gradient-to-r from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 text-pink-700 font-medium rounded-lg px-5 sm:px-6 py-2 shadow-sm transition-all duration-200 text-sm w-full sm:w-auto"
+              disabled={isSaving}
+              className={`bg-gradient-to-r from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 text-pink-700 font-medium rounded-lg px-5 sm:px-6 py-2 shadow-sm transition-all duration-200 text-sm w-full sm:w-auto ${isSaving ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
-              Save
+              {isSaving ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>

@@ -1,14 +1,30 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Smile } from 'lucide-react';
 
 
 export default function ChatInput({ onSendMessage, isLoading = false, disabled = false, currentCharacter = null }) {
   const [message, setMessage] = useState('');
   const textareaRef = useRef(null);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const emojiPanelRef = useRef(null);
 
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!showEmoji) return;
+      if (
+        emojiPanelRef.current &&
+        !emojiPanelRef.current.contains(e.target)
+      ) {
+        setShowEmoji(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showEmoji]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -29,6 +45,53 @@ export default function ChatInput({ onSendMessage, isLoading = false, disabled =
     }
   };
 
+  const commonEmojis = [
+    // Faces & Emotions
+    '😀','😁','😂','🤣','😊','😍','😘','😇','🤗','🤩',
+    '🤔','🤨','😅','🥲','😴','😎','😭','😤','😡','🥳',
+    '😱','🤯','😳','😏','🙃','🤤','🤒','🤕','🤧','😷',
+  
+    // Gestures & Hands
+    '👍','🙏','👏','👀','💪','👌','🤝','✌️','🤞','🤟',
+    '👋','🫶','🤲','👉','👈','☝️','👇','🖐️','✋','🤌',
+  
+    // Symbols
+    '🔥','✨','🌟','💖','💯','✅','❌','⚡','⭐','🎯',
+    '🔔','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎',
+  
+    // Nature & Animals
+    '🌸','🌹','🌻','🌼','🌷','🌴','🌞','🌙','⭐','☁️',
+    '🐶','🐱','🦁','🐯','🐻','🐼','🐨','🐧','🐦','🐤',
+  
+    // Food & Drink
+    '🍎','🍌','🍇','🍉','🍓','🍔','🍟','🍕','🍩','🍫',
+    '🍿','🥤','☕','🍵','🍺','🍷','🥂','🍽️','🥗','🍝',
+  
+    // Activities & Objects
+    '⚽','🏀','🏈','🎾','🎮','🎲','🎵','🎤','🎧','🎁',
+    '✈️','🚗','🚀','🏠','💻','📱','📝','📚','💡','🕹️'
+  ];
+  
+  const insertEmoji = (emoji) => {
+    setMessage((prev) => {
+      const selectionStart = textareaRef.current?.selectionStart ?? prev.length;
+      const selectionEnd = textareaRef.current?.selectionEnd ?? prev.length;
+      const before = prev.slice(0, selectionStart);
+      const after = prev.slice(selectionEnd);
+      const next = `${before}${emoji}${after}`;
+      // restore caret position after state update
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          const newPos = selectionStart + emoji.length;
+          textareaRef.current.focus();
+          textareaRef.current.selectionStart = newPos;
+          textareaRef.current.selectionEnd = newPos;
+        }
+      });
+      return next;
+    });
+  };
+
   return (
     <div className="bg-white border-t border-gray-100 p-4">
       <form onSubmit={handleSubmit} className="flex gap-3 items-end">
@@ -47,8 +110,37 @@ export default function ChatInput({ onSendMessage, isLoading = false, disabled =
               msOverflowStyle: 'none',
             }}
           />
-          
-      
+          {/* Emoji toggle button */}
+          <button
+            type="button"
+            aria-label="Add emoji"
+            className="absolute right-2 bottom-2 p-2 rounded-full hover:bg-gray-100 text-gray-600"
+            onClick={() => setShowEmoji((s) => !s)}
+            disabled={disabled}
+          >
+            <Smile className="w-5 h-5" />
+          </button>
+
+          {/* Emoji popover */}
+          {showEmoji && (
+            <div
+              ref={emojiPanelRef}
+              className="absolute bottom-14 right-0 z-20 w-72 p-2 bg-white border border-gray-200 rounded-xl shadow-lg"
+            >
+              <div className="grid grid-cols-8 gap-1 max-h-40 overflow-y-auto">
+                {commonEmojis.map((em) => (
+                  <button
+                    key={em}
+                    type="button"
+                    className="h-10 w-10 flex items-center justify-center rounded hover:bg-gray-100 text-base"
+                    onClick={() => insertEmoji(em)}
+                  >
+                    {em}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         
         <button

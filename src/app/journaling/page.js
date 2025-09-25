@@ -98,18 +98,54 @@ export default function JournalingPage() {
     setContent(e.currentTarget.innerHTML);
   };
 
-  const toggleHistory = () => {
+  const toggleHistory = async () => {
     if (!historyVisible) {
-      const dummy = `<p><b>Past Reflection:</b> Today was productive. I completed my tasks and learned something new.</p>`;
-      setContent(dummy);
-      if (contentRef.current) contentRef.current.innerHTML = dummy;
-      setHistoryVisible(true);
+      if (!userId || !activeTag) {
+        alert("User or tag missing.");
+        return;
+      }
+      try {
+        console.log("Loading history for:", { userId, activeTag });
+        const res = await fetch(
+          `/api/journal/list?userId=${encodeURIComponent(userId)}&tag=${encodeURIComponent(activeTag)}&limit=5`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) {
+          console.error("Failed to load history:", res.status, res.statusText);
+          return;
+        }
+        const data = await res.json();
+        console.log("History data received:", data);
+  
+        // agar history entries available hain
+        if (data?.entries?.length > 0) {
+          const html = data.entries
+            .map(
+              (entry, i) =>
+                `<p><b>Entry ${i + 1}:</b> ${entry.content}</p><hr/>`
+            )
+            .join("");
+          setContent(html);
+          if (contentRef.current) contentRef.current.innerHTML = html;
+        } else {
+          // agar kuch bhi nahi mila to dummy
+          const dummy = `<p><b>Past Reflection:</b> Today was productive. I completed my tasks and learned something new.</p>`;
+          setContent(dummy);
+          if (contentRef.current) contentRef.current.innerHTML = dummy;
+        }
+  
+        setHistoryVisible(true);
+      } catch (err) {
+        console.error("History load error:", err);
+      }
     } else {
-      setContent('');
-      if (contentRef.current) contentRef.current.innerHTML = '';
+      // history ko band karna
+      setContent("");
+      if (contentRef.current) contentRef.current.innerHTML = "";
       setHistoryVisible(false);
     }
   };
+  
 
   return (
     <div className="bg-gray-50 min-h-screen py-3 sm:py-4">

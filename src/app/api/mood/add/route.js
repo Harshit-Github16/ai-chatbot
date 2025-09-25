@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 
 export async function POST(request) {
   try {
@@ -9,8 +9,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'userId and key are required' }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db();
+    const { db } = await connectToDatabase();
     const doc = {
       userId,
       key,
@@ -21,6 +20,7 @@ export async function POST(request) {
     await db.collection('moods').insertOne(doc);
     return NextResponse.json({ ok: true, mood: doc });
   } catch (e) {
+    console.error('Error adding mood:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

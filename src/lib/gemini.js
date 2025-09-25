@@ -164,43 +164,64 @@ Hamesha ISO 8601 timestamp do "createdAt" me.
     
 
     
-    const genAI = getRandomGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const result = await model.generateContent(prompt);
+    // Try each API key until one works
+    let lastError = null;
+    for (let i = 0; i < GEMINI_KEYS.length; i++) {
+      try {
+        console.log(`Trying API key ${i + 1}/${GEMINI_KEYS.length}`);
+        const genAI = new GoogleGenerativeAI(GEMINI_KEYS[i]);
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const result = await model.generateContent(prompt);
+        
+        const text = await result.response.text();
+        console.log("RAW GEMINI RESPONSE:", text);
+        
+        // Parse JSON output
+        let parsed;
+        try {
+          // Some models return fenced code blocks – strip them
+          const cleaned = text
+            .replace(/^```(json)?/i, '')
+            .replace(/```$/i, '')
+            .trim();
+          // Extract first JSON object if extra text exists
+          const start = cleaned.indexOf('{');
+          const end = cleaned.lastIndexOf('}');
+          const jsonSlice = start !== -1 && end !== -1 ? cleaned.slice(start, end + 1) : cleaned;
+          parsed = JSON.parse(jsonSlice);
+          if (!parsed.createdAt) parsed.createdAt = new Date().toISOString();
+        } catch {
+          parsed = {
+            Reply: text || "I'm here and listening. 💙",
+            Mood: "Neutral",
+            Reason: "AI response not in expected format",
+            createdAt: new Date().toISOString()
+          };
+        }
 
-    // Yeh line galat hai
-    // const text = result?.response?.text?.() || '';
-    
-    // Sahi line
-    const text = await result.response.text();
-    
-    console.log("RAW GEMINI RESPONSE:", text);
-    
- 
-    // Parse JSON output
-    let parsed;
-    try {
-      // Some models return fenced code blocks – strip them
-      const cleaned = text
-        .replace(/^```(json)?/i, '')
-        .replace(/```$/i, '')
-        .trim();
-      // Extract first JSON object if extra text exists
-      const start = cleaned.indexOf('{');
-      const end = cleaned.lastIndexOf('}');
-      const jsonSlice = start !== -1 && end !== -1 ? cleaned.slice(start, end + 1) : cleaned;
-      parsed = JSON.parse(jsonSlice);
-      if (!parsed.createdAt) parsed.createdAt = new Date().toISOString();
-    } catch {
-      parsed = {
-        Reply: text || "I'm here and listening. 💙",
-        Mood: "Neutral",
-        Reason: "AI response not in expected format",
-        createdAt: new Date().toISOString()
-      };
+        console.log(`Successfully used API key ${i + 1}`);
+        return parsed;
+        
+      } catch (error) {
+        console.error(`API key ${i + 1} failed:`, error?.message || error);
+        lastError = error;
+        
+        // If this is not the last key, continue to next one
+        if (i < GEMINI_KEYS.length - 1) {
+          console.log(`Trying next API key...`);
+          continue;
+        }
+      }
     }
 
-    return parsed;
+    // If all API keys failed, return fallback response
+    console.error('All API keys failed. Last error:', lastError?.message || lastError);
+    return {
+      Reply: "Lagta hai aaj ke liye quota khatam ho gaya 🫠, kal fir baat karte hain!",
+      Mood: "Neutral",
+      Reason: "All API keys exhausted",
+      createdAt: new Date().toISOString()
+    };
   } catch (error) {
     console.error('Error generating response:', error?.message || error);
     const now = new Date().toISOString();

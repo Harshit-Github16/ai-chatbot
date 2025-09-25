@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 
 export async function GET(request) {
   try {
@@ -13,8 +13,7 @@ export async function GET(request) {
       return NextResponse.json({ error: 'userId and tag are required' }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db();
+    const { db } = await connectToDatabase();
     const entries = await db
       .collection('journals')
       .find({ userId, tag })
@@ -24,6 +23,7 @@ export async function GET(request) {
 
     return NextResponse.json({ ok: true, entries });
   } catch (e) {
+    console.error('Error fetching journal entries:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

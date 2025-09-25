@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 
 export async function PUT(request) {
   try {
@@ -7,8 +7,7 @@ export async function PUT(request) {
     const { goalId, userId, title, progress, tags } = body || {};
     if (!goalId || !userId) return NextResponse.json({ error: 'goalId and userId required' }, { status: 400 });
 
-    const client = await clientPromise;
-    const db = client.db();
+    const { db } = await connectToDatabase();
 
     const { ObjectId } = require('mongodb');
     const filter = { _id: new ObjectId(goalId), userId };
@@ -22,6 +21,7 @@ export async function PUT(request) {
 
     return NextResponse.json({ ok: true, goal: result.value });
   } catch (e) {
+    console.error('Error updating goal:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

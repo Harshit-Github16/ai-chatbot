@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 
 export async function GET(request) {
   try {
@@ -9,8 +9,7 @@ export async function GET(request) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db();
+    const { db } = await connectToDatabase();
     const latest = await db
       .collection('moods')
       .find({ userId })
@@ -20,6 +19,7 @@ export async function GET(request) {
 
     return NextResponse.json({ latest: latest[0] || null });
   } catch (e) {
+    console.error('Error fetching latest mood:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

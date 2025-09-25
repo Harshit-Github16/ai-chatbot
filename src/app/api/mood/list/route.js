@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 
 export async function GET(request) {
   try {
@@ -18,11 +18,11 @@ export async function GET(request) {
       if (to) query.createdAt.$lte = new Date(to);
     }
 
-    const client = await clientPromise;
-    const db = client.db();
+    const { db } = await connectToDatabase();
     const moods = await db.collection('moods').find(query).sort({ createdAt: -1 }).toArray();
     return NextResponse.json({ moods });
   } catch (e) {
+    console.error('Error fetching moods:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

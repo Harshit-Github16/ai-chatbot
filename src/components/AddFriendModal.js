@@ -91,6 +91,43 @@ export default function AddFriendModal({ isOpen, onClose, onSubmit }) {
             <label className="block text-sm font-medium text-gray-700 mb-3">
               Choose a profile image
             </label>
+            
+            {/* Upload option */}
+            <div className="mb-4">
+              <label className="block text-sm text-gray-600 mb-2">Upload Custom Avatar</label>
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={formData.image} alt="preview" className="w-full h-full object-cover" />
+                </div>
+                <label className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                        const data = await res.json();
+                        if (res.ok && data?.url) {
+                          setFormData(prev => ({ ...prev, image: data.url }));
+                        }
+                      } catch (err) {
+                        console.error('Upload error:', err);
+                      }
+                    }}
+                  />
+                  <span>Upload</span>
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">PNG, JPG up to 2MB.</p>
+            </div>
+
+            {/* Predefined image options */}
             <div className="grid grid-cols-5 gap-3">
               {imageOptions.map((img) => (
                 <button

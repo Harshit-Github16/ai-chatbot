@@ -24,14 +24,19 @@ export default function JournalingPage() {
     const load = async () => {
       if (!userId || !activeTag) return;
       try {
+        console.log('Loading journal for:', { userId, activeTag });
         const res = await fetch(`/api/journal/list?userId=${encodeURIComponent(userId)}&tag=${encodeURIComponent(activeTag)}&limit=1`, { cache: 'no-store' });
-        if (!res.ok) return;
+        if (!res.ok) {
+          console.error('Failed to load journal:', res.status, res.statusText);
+          return;
+        }
         const data = await res.json();
+        console.log('Journal data received:', data);
         const latest = data?.entries?.[0]?.content || '';
         setContent(latest);
         if (contentRef.current) contentRef.current.innerHTML = latest;
-      } catch (_) {
-        // ignore
+      } catch (error) {
+        console.error('Error loading journal:', error);
       }
     };
     load();
@@ -48,24 +53,36 @@ export default function JournalingPage() {
   };
 
   const save = async () => {
-    if (!activeTag || !content.trim()) return;
+    if (!activeTag || !content.trim()) {
+      alert('Please select a tag and enter some content to save.');
+      return;
+    }
     if (!userId) {
       alert('User not found. Please set up your profile first.');
       return;
     }
     try {
       setIsSaving(true);
+      console.log('Saving journal:', { userId, tag: activeTag, content: content.substring(0, 50) + '...' });
+      
       const res = await fetch('/api/journal/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, tag: activeTag, content })
       });
+      
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Failed to save');
+      console.log('Save response:', data);
+      
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to save');
+      }
+      
       alert(`Saved for ${activeTag}!`);
       setContent('');
       if (contentRef.current) contentRef.current.innerHTML = '';
     } catch (e) {
+      console.error('Save error:', e);
       alert(e.message || 'Something went wrong while saving');
     } finally {
       setIsSaving(false);

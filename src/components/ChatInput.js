@@ -125,19 +125,20 @@ export default function ChatInput({ onSendMessage, isLoading = false, disabled =
           {showEmoji && (
             <div
               ref={emojiPanelRef}
-              className="absolute bottom-14 right-0 z-20 w-72 p-2 bg-white border border-gray-200 rounded-xl shadow-lg"
+              className="absolute bottom-14 right-0 z-20 lg:w-100 w-72 p-2 bg-white border border-gray-200 rounded-xl shadow-lg"
             >
               <div className="grid grid-cols-8 gap-1 max-h-40 overflow-y-auto">
-                {commonEmojis.map((em) => (
-                  <button
-                    key={em}
-                    type="button"
-                    className="h-10 w-10 flex items-center justify-center rounded hover:bg-gray-100 text-base"
-                    onClick={() => insertEmoji(em)}
-                  >
-                    {em}
-                  </button>
-                ))}
+              {commonEmojis.map((em, idx) => (
+  <button
+    key={`${em}-${idx}`}
+    type="button"
+    className="h-10 w-10 flex items-center justify-center rounded hover:bg-gray-100 text-base"
+    onClick={() => insertEmoji(em)}
+  >
+    {em}
+  </button>
+))}
+
               </div>
             </div>
           )}

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateResponse } from '@/lib/gemini';
+import { generateTaraReply } from '@/lib/gemini';
 import { getChats, saveChat, getUserProfile } from '@/lib/mongodb';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -24,7 +24,7 @@ export async function POST(request) {
     const characterRole = userProfile?.characters?.[characterName.toLowerCase().replace(/\s+/g, '_')]?.role || 'best_friend';
 
     // Generate AI response
-    const botResponse = await generateResponse(message, conversationHistory, characterRole, userName);
+    const botResponse = await generateTaraReply(message, conversationHistory, characterRole, userName);
 
     // Save user message with unique ID
     const userMessageId = uuidv4();

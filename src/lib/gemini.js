@@ -100,7 +100,7 @@ ${userName ? userName + ":" : "User:"} ${userMessage}
 Reply only as ${character.name} in JSON format.
 `;
 
-    const apiKey = process.env.GROQ_API_KEY || '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';
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) return getFallbackResponse("API key not configured");
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {

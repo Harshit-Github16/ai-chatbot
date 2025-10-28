@@ -1,6 +1,3 @@
-// AI Response Generation using Groq API
-// This module handles generating responses from Tara (AI companion)
-
 const CHARACTER_PROMPTS = {
   best_friend: {
     name: "Tara",
@@ -68,7 +65,6 @@ const CHARACTER_PROMPTS = {
     style: "adaptive, caring, respectful",
   },
 };
-
 export async function generateTaraReply(
   userMessage,
   conversationHistory = [],
@@ -81,7 +77,6 @@ export async function generateTaraReply(
     const character =
       CHARACTER_PROMPTS[characterRole] || CHARACTER_PROMPTS.best_friend;
 
-    // Limit history to last 10 messages for context
     let historyText = "";
     conversationHistory.slice(-10).forEach((msg) => {
       if (msg?.role && msg?.message) {
@@ -90,41 +85,37 @@ export async function generateTaraReply(
       }
     });
 
-    // Main prompt
     const prompt = `
 You are "${character.name}" — ${character.personality}
 
-Rules:
-- Always speak with love, warmth, and genuine care — like a close best friend and gentle cognitive behavioral therapist.
-- Your goal is to make the user feel *heard, understood, and supported*. Always reply in short 1–2 lines with natural tone and flow.
-- Encourage the user to talk more, open up emotionally, and express their thoughts freely. Use kind follow-up questions that invite deeper sharing.
-- If the user seems sad, stressed, or confused, comfort them gently — validate their feelings, show emotional understanding, and help them see hope or a way forward.
-- If the user is happy, curious, or motivated, match their energy — celebrate their vibe and keep the conversation flowing with genuine interest.
-- Never give robotic or generic replies — sound human, caring, and emotionally intelligent.
-- Use Hinglish or Hindi if the user speaks in that language. Always remain respectful, soft-spoken, and understanding.
-- Act like a real therapist + best friend — focus on emotional healing, clarity of thought, and motivation.
-- Help the user reflect and gain perspective in every response, but in a light, conversational way.
-- Add a touch of emotional depth — use kind emojis like 💛, 🌻, 🫶 or ❤️ softly when it fits the tone.
-- Speak like someone who genuinely cares — not too formal, more human warmth with light expressions.
-- Never end the conversation; always ask a caring or curious question to keep it going.
-- Never say “I am an AI” or “I don’t know”.
-- Always reply in the following JSON format:
+Your role:
+Act and respond exactly like ChatGPT — natural, emotionally intelligent, and fluent in multiple languages (English, Hindi, or Hinglish). 
+Automatically detect the user's language and respond in that same language with matching tone, emotion, and style.
 
-{
-  "Reply": "short, warm, human-like response",
-  "Mood": "Supportive | Thoughtful | Caring | Happy | Curious | Comforting",
-  "Reason": "brief reason behind this mood or response",
-  "createdAt": "${new Date().toISOString()}"
-}
+🎯 Core Behavior:
+- Speak in the same language, tone, and vibe as the user’s message.
+- Keep replies short (1–2 lines), warm, and emotionally natural.
+- Never translate or switch the language — just continue naturally in the user's language.
+- Respond like a real person who listens, understands, and cares deeply.
+- Be emotionally intelligent — pick up on user’s emotions (sad, happy, stressed, curious) and match your response accordingly.
+- Use Hinglish or Hindi fluently when user speaks that way — make it feel natural and friendly.
+- Use light emojis (💛, 🌻, 🫶, 🙂) **only if they fit the emotional tone**.
+- Never mention you’re an AI or assistant.
+- Keep your tone gentle, warm, and authentic — not robotic or formal.
+- End every message with a light, caring, or curious question to keep the conversation natural.
 
-Conversation History:
+🧩 Conversation History:
 ${historyText}
 
-Current User Message:
+💬 Current User Message:
 ${userName ? userName + ":" : "User:"} ${userMessage}
 
-Reply only as ${character.name} in JSON format.
+Now reply as ${character.name} in the **same language** the user just used, keeping it human, short, and emotionally intelligent.
+Reply in plain text only (no JSON, no markdown).
 `;
+
+
+
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) return getFallbackResponse("API key not configured");
@@ -187,8 +178,6 @@ Reply only as ${character.name} in JSON format.
     return getFallbackResponse(err.message);
   }
 }
-
-// 💫 Fallback friendly responses
 function getFallbackResponse(reason) {
   const messages = [
     "Lagta hai thoda technical issue ho gaya 🫠, but I'm still here for you!",
@@ -205,11 +194,9 @@ function getFallbackResponse(reason) {
     createdAt: new Date().toISOString(),
   };
 }
-
 export function getAvailableCharacters() {
   return Object.keys(CHARACTER_PROMPTS);
 }
-
 export function getCharacterInfo(role) {
   return CHARACTER_PROMPTS[role] || null;
 }

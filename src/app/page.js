@@ -2,19 +2,28 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function HomePage() {
   const router = useRouter();
+  const { user } = useAuth();
 
   useEffect(() => {
-    // This effect runs once when the component mounts.
-    // It's a good place to put redirection logic.
-    router.push('/chat');
-  }, [router]); // The router dependency ensures this doesn't create an infinite loop.
+    if (user) {
+      // User is logged in, redirect to chat
+      router.push('/chat');
+    } else {
+      // User is not logged in, redirect to landing page
+      router.push('/landing');
+    }
+  }, [user, router]);
 
   return (
-    <div>
-      <p>Redirecting you to the chat page...</p>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading...</p>
+      </div>
     </div>
   );
 }

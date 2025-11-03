@@ -16,6 +16,8 @@ export async function POST(request) {
     // Save the chat message
     const result = await saveChat(userId, characterName, { role, message, usermood, moodReason, createdAt });
 
+    // Journal will be generated at day end with complete chat analysis
+
     return NextResponse.json({
       success: true,
       messageId: result.insertedId,
@@ -30,3 +32,4 @@ export async function POST(request) {
     );
   }
 }
+

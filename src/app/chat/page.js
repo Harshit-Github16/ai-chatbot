@@ -1,23 +1,42 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/contexts/AuthContext';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
 import UserProfileModal from '@/components/UserProfileModal';
 import AddFriendModal from '@/components/AddFriendModal';
 import ChatList from '@/components/ChatList';
-import { Heart, Sparkles, Menu, Edit } from 'lucide-react';
+import { Heart, Sparkles, Menu, Edit, LogOut } from 'lucide-react';
 import Image from 'next/image';
 import MoodModal from '@/components/MoodModal';
 import EditCharacterModal from "@/components/EditChartModel";
+
 export default function ChatPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [currentSession, setCurrentSession] = useState('all');
   const [showEditModal, setShowEditModal] = useState(false);
   const [messages, setMessages] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!user) {
+      router.push('/landing');
+    }
+  }, [user, router]);
+
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/landing');
+  };
   const messagesEndRef = useRef(null);
   const [userId, setUserId] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
@@ -272,9 +291,9 @@ export default function ChatPage() {
       const response = await fetch('/api/character/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId, 
-          characterName: friendData.name, 
+        body: JSON.stringify({
+          userId,
+          characterName: friendData.name,
           role: friendData.role,
           image: friendData.image,
           description: friendData.role === 'other' ? friendData.description : undefined
@@ -466,7 +485,7 @@ export default function ChatPage() {
                 onClick={() => setSidebarOpen(true)}
                 aria-label="Open menu"
               >
-                 <Menu className="w-5 h-5 text-gray-700" />
+                <Menu className="w-5 h-5 text-gray-700" />
                 {/* <span className="block w-5 h-[2px] bg-gray-700 relative before:content-[''] before:absolute before:-top-2 before:w-5 before:h-[2px] 
                 before:bg-gray-700 after:content-[''] after:absolute after:top-2 after:w-5 after:h-[2px] after:bg-gray-700" /> */}
 
@@ -487,11 +506,16 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Edit 
-  className="w-4 h-4 cursor-pointer"
-  onClick={() => setShowEditModal(true)}
-/>
-              
+              <Edit
+                className="w-4 h-4 cursor-pointer hover:text-gray-700"
+                onClick={() => setShowEditModal(true)}
+                title="Edit Character"
+              />
+              <LogOut
+                className="w-4 h-4 cursor-pointer hover:text-red-500"
+                onClick={handleLogout}
+                title="Logout"
+              />
             </div>
           </div>
         </div>
@@ -554,14 +578,14 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-     <div className="sticky bottom-0 bg-white/80 backdrop-blur-sm border-t border-pink-100 pb-10">
-     <ChatInput
-          onSendMessage={sendMessage}
-          isLoading={isLoading}
-          disabled={!currentCharacter}
-          currentCharacter={currentCharacter}
-        />
-     </div>
+        <div className="sticky bottom-0 bg-white/80 backdrop-blur-sm border-t border-pink-100 pb-10">
+          <ChatInput
+            onSendMessage={sendMessage}
+            isLoading={isLoading}
+            disabled={!currentCharacter}
+            currentCharacter={currentCharacter}
+          />
+        </div>
       </div>
 
       {/* Modals */}

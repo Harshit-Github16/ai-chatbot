@@ -172,6 +172,8 @@ Reply in plain text only (no JSON, no markdown).
       parsed.Reply = parsed.Reply.replace(/^"|"$/g, "").trim();
     }
 
+    // Journal update will be handled in chat save API
+
     return parsed;
   } catch (err) {
     console.error("Error in generateTaraReply:", err);
@@ -199,4 +201,76 @@ export function getAvailableCharacters() {
 }
 export function getCharacterInfo(role) {
   return CHARACTER_PROMPTS[role] || null;
+}
+
+// Auto-update journal with important conversations
+async function updateJournalEntry(userMessage, aiResponse, userName) {
+  try {
+    // Check if this conversation is important enough for journal
+    const isImportant = checkIfImportant(userMessage, aiResponse);
+
+    if (!isImportant) return;
+
+    // Get userId from localStorage (this will be passed from frontend)
+    const userId = userName || 'default_user';
+
+    // Create journal entry text
+    const journalText = createJournalEntry(userMessage, aiResponse);
+
+    // This function runs on server-side, so we can't make fetch calls
+    // We'll handle journal updates in the chat save API instead
+    console.log('Important conversation detected:', journalText);
+
+  } catch (error) {
+    console.error('Error updating journal:', error);
+  }
+}
+
+function checkIfImportant(userMessage, aiResponse) {
+  // Check for important keywords/emotions
+  const importantKeywords = [
+    'happy', 'sad', 'excited', 'worried', 'stressed', 'love', 'hate',
+    'khush', 'dukh', 'pareshan', 'tension', 'accha', 'bura', 'problem',
+    'success', 'fail', 'job', 'family', 'friend', 'relationship',
+    'achievement', 'celebration', 'birthday', 'exam', 'interview'
+  ];
+
+  const message = userMessage.toLowerCase();
+  const mood = aiResponse.Mood?.toLowerCase() || '';
+
+  // If user expressed strong emotions or mentioned important topics
+  return importantKeywords.some(keyword =>
+    message.includes(keyword) || mood.includes(keyword)
+  ) || message.length > 50; // Long messages are usually important
+}
+
+function createJournalEntry(userMessage, aiResponse) {
+  const mood = aiResponse.Mood || 'Normal';
+  const reason = aiResponse.Reason || '';
+
+  // Create a natural journal entry
+  if (mood.toLowerCase().includes('happy') || mood.toLowerCase().includes('excited')) {
+    return `Aaj khushi ki baat ki - ${userMessage}. Mood accha tha.`;
+  } else if (mood.toLowerCase().includes('sad') || mood.toLowerCase().includes('worried')) {
+    return `Aaj thoda upset tha - ${userMessage}. ${reason ? reason : 'Mood theek nahi tha.'}`;
+  } else {
+    return `${userMessage}. ${reason || 'Normal conversation tha.'}`;
+  }
+}
+
+async function appendToTodaysJournal(userId, journalText) {
+  try {
+    // This will be called from frontend, so we'll use fetch to call our API
+    const response = await fetch('/api/journal/append', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, text: journalText })
+    });
+
+    if (!response.ok) {
+      console.error('Failed to append to journal');
+    }
+  } catch (error) {
+    console.error('Error appending to journal:', error);
+  }
 }

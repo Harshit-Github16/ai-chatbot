@@ -1,268 +1,361 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Plus, History } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Edit3, Heart, MessageCircle, Share, Calendar, Sparkles, RefreshCw, Trash2 } from 'lucide-react';
 
 export default function JournalingPage() {
-  const [tags, setTags] = useState(['work', 'personal', 'ideas']);
-  const [newTag, setNewTag] = useState('');
-  const [activeTag, setActiveTag] = useState('work');
-  const [content, setContent] = useState('');
+  const [journalEntries, setJournalEntries] = useState([]);
   const [userId, setUserId] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [historyVisible, setHistoryVisible] = useState(false);
-  const contentRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [showTodayPrompt, setShowTodayPrompt] = useState(false);
+
+  // Define loadJournalEntries first
+  const loadJournalEntries = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch(`/api/journal/feed?userId=${encodeURIComponent(userId)}`, {
+        cache: 'no-store'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setJournalEntries(data.entries || []);
+      }
+    } catch (error) {
+      console.error('Error loading journal entries:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId]);
 
   useEffect(() => {
     const id = typeof window !== 'undefined' ? localStorage.getItem('tara_user_id') : '';
     setUserId(id || '');
   }, []);
 
-  // Load latest entry for active tag when userId or tag changes
+  // Load journal entries when userId changes
   useEffect(() => {
-    const load = async () => {
-      if (!userId || !activeTag) return;
-      try {
-        console.log('Loading journal for:', { userId, activeTag });
-        const res = await fetch(`/api/journal/list?userId=${encodeURIComponent(userId)}&tag=${encodeURIComponent(activeTag)}&limit=1`, { cache: 'no-store' });
-        if (!res.ok) {
-          console.error('Failed to load journal:', res.status, res.statusText);
-          return;
-        }
-        const data = await res.json();
-        console.log('Journal data received:', data);
-        const latest = data?.entries?.[0]?.content || '';
-        setContent(latest);
-        if (contentRef.current) contentRef.current.innerHTML = latest;
-      } catch (error) {
-        console.error('Error loading journal:', error);
-      }
-    };
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, activeTag]);
-
-  const addTag = () => {
-    const t = newTag.trim().toLowerCase();
-    if (!t || tags.includes(t)) return;
-    setTags([...tags, t]);
-    setNewTag('');
-    setActiveTag(t);
-    setShowModal(false);
-  };
-
-  const save = async () => {
-    if (!activeTag || !content.trim()) {
-      alert('Please select a tag and enter some content to save.');
-      return;
+    if (userId) {
+      loadJournalEntries();
     }
+  }, [userId, loadJournalEntries]);
+
+  // Check if today's entry exists and suggest generation
+  useEffect(() => {
+    if (journalEntries.length > 0) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const todayEntry = journalEntries.find(entry => {
+        const entryDate = new Date(entry.date);
+        entryDate.setHours(0, 0, 0, 0);
+        return entryDate.getTime() === today.getTime();
+      });
+
+      // If no entry for today, show suggestion
+      if (!todayEntry && !isGenerating) {
+        setShowTodayPrompt(true);
+      } else {
+        setShowTodayPrompt(false);
+      }
+    }
+  }, [journalEntries, isGenerating]);
+
+  const generateDailyEntry = async () => {
     if (!userId) {
       alert('User not found. Please set up your profile first.');
       return;
     }
+
     try {
-      setIsSaving(true);
-      console.log('Saving journal:', { userId, tag: activeTag, content: content.substring(0, 50) + '...' });
-      
-      const res = await fetch('/api/journal/add', {
+      setIsGenerating(true);
+      const res = await fetch('/api/journal/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, tag: activeTag, content })
+        body: JSON.stringify({ userId })
       });
-      
+
       const data = await res.json();
-      console.log('Save response:', data);
-      
+
       if (!res.ok) {
-        throw new Error(data?.error || 'Failed to save');
-      }
-      
-      alert(`Saved for ${activeTag}!`);
-      setContent('');
-      if (contentRef.current) contentRef.current.innerHTML = '';
-    } catch (e) {
-      console.error('Save error:', e);
-      alert(e.message || 'Something went wrong while saving');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const execCommand = (command, value = null) => {
-    document.execCommand(command, false, value);
-    if (contentRef.current) contentRef.current.focus();
-  };
-
-  const handleInput = (e) => {
-    setContent(e.currentTarget.innerHTML);
-  };
-
-  const toggleHistory = async () => {
-    if (!historyVisible) {
-      if (!userId || !activeTag) {
-        alert("User or tag missing.");
+        if (data?.error?.includes('already exists')) {
+          alert('Today\'s journal entry already exists! You can edit it.');
+        } else {
+          throw new Error(data?.error || 'Failed to generate entry');
+        }
         return;
       }
-      try {
-        console.log("Loading history for:", { userId, activeTag });
-        const res = await fetch(
-          `/api/journal/list?userId=${encodeURIComponent(userId)}&tag=${encodeURIComponent(activeTag)}&limit=5`,
-          { cache: "no-store" }
-        );
-        if (!res.ok) {
-          console.error("Failed to load history:", res.status, res.statusText);
-          return;
-        }
-        const data = await res.json();
-        console.log("History data received:", data);
-  
-        // agar history entries available hain
-        if (data?.entries?.length > 0) {
-          const html = data.entries
-            .map(
-              (entry, i) =>
-                `<p><b>Entry ${i + 1}:</b> ${entry.content}</p><hr/>`
-            )
-            .join("");
-          setContent(html);
-          if (contentRef.current) contentRef.current.innerHTML = html;
-        } else {
-          // agar kuch bhi nahi mila to dummy
-          const dummy = `<p><b>Past Reflection:</b> Today was productive. I completed my tasks and learned something new.</p>`;
-          setContent(dummy);
-          if (contentRef.current) contentRef.current.innerHTML = dummy;
-        }
-  
-        setHistoryVisible(true);
-      } catch (err) {
-        console.error("History load error:", err);
+
+      // Show success message
+      if (data?.message) {
+        alert(data.message);
       }
-    } else {
-      // history ko band karna
-      setContent("");
-      if (contentRef.current) contentRef.current.innerHTML = "";
-      setHistoryVisible(false);
+
+      // Reload entries to show the new one
+      await loadJournalEntries();
+
+    } catch (e) {
+      console.error('Generate error:', e);
+      alert(e.message || 'Something went wrong while generating entry');
+    } finally {
+      setIsGenerating(false);
     }
   };
-  
 
-  return (
-    <div className="bg-gray-50 min-h-screen py-3 sm:py-4">
-      <div className="max-w-4xl mx-auto px-3 sm:px-4">
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-4 sm:p-6 h-auto min-h-[70vh] md:min-h-[80vh] lg:min-h-[85vh]">
-          
-          {/* Tags + Actions Row */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              {tags.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setActiveTag(t)}
-                  className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all
-                    ${activeTag === t
-                      ? 'bg-gradient-to-r from-pink-100 to-pink-200 text-pink-700 shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="p-1.5 sm:p-2 rounded-full bg-pink-100 hover:bg-pink-200 text-pink-600 transition"
-            >
-              <Plus size={20} />
-            </button>
-            <button
-              onClick={toggleHistory}
-              className="p-1.5 sm:p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
-            >
-              <History size={20} />
-            </button>
-          </div>
+  const startEditing = (entry) => {
+    setEditingEntry(entry._id);
+    setEditContent(entry.content);
+  };
 
-          {/* Toolbar Row */}
-          <div className="flex flex-wrap gap-2 mb-3 sm:mb-4">
-            <button
-              onClick={() => execCommand('bold')}
-              className="p-2 border rounded-lg hover:bg-gray-100 font-bold"
-            >
-              B
-            </button>
-            <button
-              onClick={() => execCommand('italic')}
-              className="p-2 border rounded-lg hover:bg-gray-100 italic"
-            >
-              I
-            </button>
-            <button
-              onClick={() => execCommand('underline')}
-              className="p-2 border rounded-lg hover:bg-gray-100 underline"
-            >
-              U
-            </button>
-          </div>
+  const saveEdit = async (entryId) => {
+    try {
+      const res = await fetch('/api/journal/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entryId,
+          userId,
+          content: editContent
+        })
+      });
 
-          {/* Editor Box */}
-          <div className="relative">
-            <div
-              ref={contentRef}
-              contentEditable
-              onInput={handleInput}
-              className="min-h-[40vh] sm:min-h-[46vh] border border-gray-200 rounded-lg px-3 sm:px-4 py-3 text-gray-800 focus:outline-none focus:ring-2
-               focus:ring-pink-400 transition-all prose max-w-none h-[55vh] sm:h-[61vh] overflow-y-auto"
-              suppressContentEditableWarning
-            />
-            {content.length === 0 && (
-              <span className="absolute top-3 left-4 text-gray-400 pointer-events-none select-none text-sm sm:text-base">
-                Write your thoughts here...
-              </span>
-            )}
-          </div>
+      if (res.ok) {
+        setEditingEntry(null);
+        setEditContent('');
+        await loadJournalEntries();
+      }
+    } catch (error) {
+      console.error('Error updating entry:', error);
+    }
+  };
 
-          <div className="flex justify-end mt-5 sm:mt-6">
-            <button
-              onClick={save}
-              disabled={isSaving}
-              className={`bg-gradient-to-r from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 text-pink-700 font-medium rounded-lg px-5 sm:px-6 py-2 shadow-sm transition-all duration-200 text-sm w-full sm:w-auto ${isSaving ? 'opacity-60 cursor-not-allowed' : ''}`}
-            >
-              {isSaving ? 'Saving...' : 'Save'}
-            </button>
+  const cancelEdit = () => {
+    setEditingEntry(null);
+    setEditContent('');
+  };
+
+  const deleteEntry = async (entryId) => {
+    if (!confirm('Are you sure you want to delete this journal entry?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/journal/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId, userId })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message || 'Entry deleted successfully!');
+        await loadJournalEntries();
+      } else {
+        alert(data.error || 'Failed to delete entry');
+      }
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      alert('Something went wrong while deleting');
+    }
+  };
+
+  const generateDayEndJournal = async () => {
+    if (!userId) {
+      alert('User not found. Please set up your profile first.');
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      const res = await fetch('/api/journal/daily-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to generate journal');
+      }
+
+      // Show success message
+      if (data?.message) {
+        alert(data.message);
+      }
+
+      // Reload entries to show the new one
+      await loadJournalEntries();
+
+    } catch (e) {
+      console.error('Generate error:', e);
+      alert(e.message || 'Something went wrong while generating journal');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-gray-50 min-h-screen py-4">
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="animate-pulse space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-xl p-6 shadow-sm">
+                <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                  <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Add Tag Modal */}
-        {showModal && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 px-3">
-            <div className="bg-white rounded-xl shadow-lg p-5 sm:p-6 w-[90%] max-w-sm sm:max-w-md md:w-96">
-              <h2 className="text-lg font-semibold mb-4">Add New Tag</h2>
-              <input
-                type="text"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addTag()}
-                placeholder="Enter tag name..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-pink-400"
-              />
-              <div className="flex flex-wrap justify-end gap-2 sm:gap-3">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-lg border hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={addTag}
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 text-pink-700 font-medium"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
+  return (
+    <div className="bg-gray-50 min-h-screen py-4">
+      <div className="max-w-2xl mx-auto px-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">My Journal</h1>
+            <p className="text-gray-600">Complete day reflections based on all conversations</p>
           </div>
-        )}
+          <button
+            onClick={generateDayEndJournal}
+            disabled={isGenerating}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200 ${isGenerating ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105'
+              }`}
+          >
+            {isGenerating ? (
+              <RefreshCw size={18} className="animate-spin" />
+            ) : (
+              <Sparkles size={18} />
+            )}
+            {isGenerating ? 'Generating...' : 'Generate Today\'s Journal'}
+          </button>
+        </div>
+
+
+
+        {/* Journal Feed */}
+        <div className="space-y-6">
+          {journalEntries.length === 0 ? (
+            <div className="text-center py-12">
+              <Sparkles size={48} className="mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No journal entries yet</h3>
+              <p className="text-gray-600 mb-6">Start chatting and your journal will automatically update!</p>
+
+            </div>
+          ) : (
+            journalEntries.map((entry) => (
+              <div key={entry._id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
+                {/* Entry Header */}
+                <div className="p-4 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center">
+                        <Calendar size={20} className="text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900">Daily Reflection</h3>
+                        <p className="text-sm text-gray-500">{formatDate(entry.date)}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => startEditing(entry)}
+                        className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        title="Edit entry"
+                      >
+                        <Edit3 size={16} className="text-gray-500" />
+                      </button>
+                      <button
+                        onClick={() => deleteEntry(entry._id)}
+                        className="p-2 rounded-full hover:bg-red-100 transition-colors"
+                        title="Delete entry"
+                      >
+                        <Trash2 size={16} className="text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Entry Content */}
+                <div className="p-4">
+                  {editingEntry === entry._id ? (
+                    <div className="space-y-4">
+                      <textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        className="w-full p-3 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
+                        rows={6}
+                        placeholder="Edit your journal entry..."
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={cancelEdit}
+                          className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => saveEdit(entry._id)}
+                          className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="prose prose-gray max-w-none">
+                      <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{entry.content}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Entry Actions */}
+                {editingEntry !== entry._id && (
+                  <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <button className="flex items-center gap-2 text-gray-600 hover:text-pink-600 transition-colors">
+                          <Heart size={18} />
+                          <span className="text-sm">Like</span>
+                        </button>
+                        <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
+                          <MessageCircle size={18} />
+                          <span className="text-sm">Reflect</span>
+                        </button>
+                      </div>
+                      <button className="flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors">
+                        <Share size={18} />
+                        <span className="text-sm">Share</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
